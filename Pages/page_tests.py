@@ -52,8 +52,9 @@ def app():
 
     if lancer_tests:
         with st.spinner("Analyse en cours... ⏳"):
-            propose_tests_interactif_streamlit(types_df, distribution_df, df, mots_cles)
+            propose_tests_interactif_streamlit(df, types_df, distribution_df, mots_cles)
         st.success("✅ Les tests interactifs ont été exécutés avec succès.")
+
 
 
 
