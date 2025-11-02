@@ -25,3 +25,5 @@ def app():
             df_types.at[i, "type"] = new_type
         st.session_state["types_df"] = df_types
         st.dataframe(df_types)
+# --- 7️⃣ Récupérer le dataframe sélectionné pour le reste de l'app ---
+        st.session_state['types_df'] = df_types
