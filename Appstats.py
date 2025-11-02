@@ -12,6 +12,7 @@ st.sidebar.title("Navigation")
 page = st.sidebar.radio("Aller à :", [
     "Accueil",
     "Fichier",
+    "Variables",
     "Descriptive",
     "Distribution",
     "Tests"
@@ -36,5 +37,6 @@ elif page == "Distribution":
 elif page == "Tests":
     from Pages import page_tests
     page_tests.app()
+
 
 
