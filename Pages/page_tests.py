@@ -47,13 +47,11 @@ def app():
     lancer_tests = st.button("🧠 Lancer les tests interactifs")
 
 
-    st.write("Colonnes détectées :", types_df.columns.tolist())
-
-
     if lancer_tests:
         with st.spinner("Analyse en cours... ⏳"):
             propose_tests_interactif_streamlit(df, types_df, distribution_df, mots_cles)
         st.success("✅ Les tests interactifs ont été exécutés avec succès.")
+
 
 
 
