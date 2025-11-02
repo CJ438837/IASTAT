@@ -15,7 +15,7 @@ from sklearn.linear_model import LinearRegression, LogisticRegression
 from Bio import Entrez
 import itertools
 import numpy as np
-from modules.IA_STAT_interactif2 import propose_tests_interactif
+from modules.IA_STAT_interactif2 import propose_tests_interactif_streamlit
 
 def app():
     st.title("📊 Tests statistiques interactifs")
@@ -39,3 +39,4 @@ def app():
         # Appel à la fonction interactive adaptée
         propose_tests_interactif(types_df, distribution_df, df, mots_cles)
         st.success("✅ Tous les tests interactifs ont été proposés et exécutés.")
+
