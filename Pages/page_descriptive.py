@@ -14,16 +14,16 @@ def app():
     st.title("📊 Analyse Descriptive")
 
     # --- Récupération des données et types ---
-    if 'df_selected' not in st.session_state or 'types_results' not in st.session_state:
+    if 'df_selected' not in st.session_state or 'df_types' not in st.session_state:
         st.warning("⚠️ Veuillez d'abord importer un fichier et détecter les types de variables dans la page Fichier et Variables.")
         return
 
     df = st.session_state['df_selected']
-    types_results = st.session_state['types_results']  # dictionnaire de feuilles
+    types_results = st.session_state['df_types']  # dictionnaire de feuilles
 
     # --- Choix de la feuille à analyser ---
-    feuille = st.selectbox("Choisir la feuille à analyser :", list(types_results.keys()))
-    types_df = types_results[feuille]
+    feuille = st.selectbox("Choisir la feuille à analyser :", list(df_types.keys()))
+    types_df = df_types[feuille]
 
     # --- Bouton pour lancer l'analyse ---
     if st.button("🧮 Lancer l'analyse descriptive"):
@@ -55,3 +55,4 @@ def app():
             st.image(img_path, use_column_width=True)
         else:
             st.info("Aucun graphique généré pour cette feuille.")
+
