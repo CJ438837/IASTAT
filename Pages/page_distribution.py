@@ -23,11 +23,11 @@ def app():
     output_folder = "distribution_plots"
 
     # Exécution de l'analyse
-    distribution_results = advanced_distribution_analysis(df, types_df, output_folder=output_folder)
-    st.dataframe(distribution_results)
+    distribution_df = advanced_distribution_analysis(df, types_df, output_folder=output_folder)
+    st.dataframe(distribution_df)
 
     # --- 2️⃣b Sauvegarde dans la session ---
-    st.session_state["distribution_df"] = distribution_results
+    st.session_state["distribution_df"] = distribution_df
 
     # --- 3️⃣ Navigation des graphiques ---
     plot_files = sorted([f for f in os.listdir(output_folder) if f.endswith(".png")])
@@ -52,3 +52,4 @@ def app():
     plot_path = os.path.join(output_folder, plot_files[st.session_state.dist_plot_index])
     st.image(plot_path, use_column_width=True)
     st.caption(f"Graphique {st.session_state.dist_plot_index + 1} / {len(plot_files)} : {plot_files[st.session_state.dist_plot_index]}")
+
