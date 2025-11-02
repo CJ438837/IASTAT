@@ -24,6 +24,9 @@ if page == "Accueil":
 elif page == "Fichier":
     from Pages import page_fichier
     page_fichier.app()
+elif page == "Variables":
+    from Pages import page_variables
+    page_fichier.app()
 elif page == "Descriptive":
     from Pages import page_descriptive
     page_descriptive.app()
@@ -33,3 +36,4 @@ elif page == "Distribution":
 elif page == "Tests":
     from Pages import page_tests
     page_tests.app()
+
