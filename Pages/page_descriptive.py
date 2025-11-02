@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 from modules.IA_STAT_descriptive_251125 import descriptive_analysis
-from modules.IA_STAT_illustration_251125 import plot_descriptive
+from modules.IA_STAT_Illustrations_251125 import plot_descriptive
 
 def app():
     st.title("📊 Analyse Descriptive")
@@ -56,3 +56,4 @@ def app():
     plot_path = os.path.join(output_folder, plot_files[st.session_state.plot_index])
     st.image(plot_path, use_column_width=True)
     st.caption(f"Graphique {st.session_state.plot_index + 1} / {len(plot_files)} : {plot_files[st.session_state.plot_index]}")
+
