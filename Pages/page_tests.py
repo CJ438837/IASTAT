@@ -1,20 +1,7 @@
 import streamlit as st
-
-def app():
-    st.header("Tests")
-    st.write("Le dur du sujet ! voyons ce que tes données ont dans le ventre")
-
-import streamlit as st
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from scipy import stats
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
-from sklearn.linear_model import LinearRegression, LogisticRegression
-from Bio import Entrez
-import itertools
-import numpy as np
 from modules.IA_STAT_interactif2 import propose_tests_interactif_streamlit
 
 def app():
@@ -31,12 +18,9 @@ def app():
     mots_cles = st.session_state.get("keywords", [])
 
     st.markdown("### 💡 Propositions de tests")
-    
-    # --- Checkbox pour lancer les tests ---
-    lancer_tests = st.button("Lancer les tests interactifs")
-    
-    if lancer_tests:
-        # Appel à la fonction interactive adaptée
-        propose_tests_interactif(types_df, distribution_df, df, mots_cles)
-        st.success("✅ Tous les tests interactifs ont été proposés et exécutés.")
 
+    # --- Lancer les tests avec un bouton ---
+    if st.button("Lancer les tests interactifs"):
+        with st.spinner("Exécution des tests..."):
+            propose_tests_interactif_streamlit(types_df, distribution_df, df, mots_cles)
+        st.success("✅ Tous les tests interactifs ont été proposés et exécutés.")
