@@ -1,7 +1,4 @@
 import streamlit as st
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
 from modules.IA_STAT_interactif2 import propose_tests_interactif_streamlit
 
 def app():
@@ -20,24 +17,28 @@ def app():
         st.stop()
 
     df = st.session_state["df_selected"]
-    types_df = st.session_state["types_df"]
+    types_df = st.session_state["types_df"].copy()
     distribution_df = st.session_state["distribution_df"]
     mots_cles = st.session_state.get("keywords", [])
 
-    # --- 2️⃣ Normalisation des colonnes ---
-    # Si la colonne du type n'existe pas avec le nom 'type', on la renomme
+    # --- 2️⃣ Assurer l’existence de la colonne 'type' ---
+    # Renommer automatiquement si elle a un autre nom
     if 'type' not in types_df.columns:
-        possible_names = ['var_type', 'Type', 'variable_type']
-        for name in possible_names:
-            if name in types_df.columns:
-                types_df = types_df.rename(columns={name: 'type'})
+        for col_name in types_df.columns:
+            if col_name.lower() in ['type', 'var_type', 'variable_type']:
+                types_df = types_df.rename(columns={col_name: 'type'})
                 break
-    st.session_state["types_df"] = types_df
+        else:
+            st.error("Le DataFrame des types ne contient aucune colonne de type valide ('type', 'var_type', etc.).")
+            st.stop()
+
+    st.session_state["types_df"] = types_df  # mise à jour
 
     st.success("✅ Fichier importé, types détectés et distributions analysées.")
 
     # --- 3️⃣ Lancer les tests interactifs ---
     st.markdown("### 💡 Propositions de tests")
     if st.button("Lancer les tests interactifs"):
+        # Passer le types_df corrigé
         propose_tests_interactif_streamlit(types_df, distribution_df, df, mots_cles)
         st.success("✅ Tous les tests interactifs ont été proposés et exécutés.")
