@@ -1,10 +1,4 @@
 import streamlit as st
-
-def app():
-    st.header("Analyse des distributions")
-    st.write("Voyons quelles sont les distributions de tes données, un élément indispenssable pour bien choisir les tests à réaliser")
-
-import streamlit as st
 import os
 from modules.IA_STAT_distribution_251125 import advanced_distribution_analysis
 
@@ -27,8 +21,13 @@ def app():
     # --- 2️⃣ Tableau récapitulatif des distributions ---
     st.subheader("Résumé des tests de distribution")
     output_folder = "distribution_plots"
+
+    # Exécution de l'analyse
     distribution_results = advanced_distribution_analysis(df, types_df, output_folder=output_folder)
     st.dataframe(distribution_results)
+
+    # --- 2️⃣b Sauvegarde dans la session ---
+    st.session_state["distribution_df"] = distribution_results
 
     # --- 3️⃣ Navigation des graphiques ---
     plot_files = sorted([f for f in os.listdir(output_folder) if f.endswith(".png")])
