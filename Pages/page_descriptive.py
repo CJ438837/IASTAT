@@ -1,37 +1,58 @@
 import streamlit as st
-import pandas as pd
+import os
 from modules.IA_STAT_descriptive_251125 import descriptive_analysis
+from modules.IA_STAT_illustration_251125 import plot_descriptive
 
 def app():
     st.title("📊 Analyse Descriptive")
 
-    # --- 1️⃣ Vérification des données ---
-    if 'df_selected' not in st.session_state or st.session_state['df_selected'] is None:
-        st.warning("⚠️ Veuillez d'abord importer et sélectionner un fichier dans la page Fichier.")
-        return
+    # --- 1️⃣ Vérification prérequis ---
+    if "df_selected" not in st.session_state:
+        st.warning("Veuillez d'abord importer un fichier dans la page Fichier.")
+        st.stop()
+    if "types_df" not in st.session_state:
+        st.warning("Veuillez d'abord détecter les types de variables dans la page Variables.")
+        st.stop()
 
-    if 'types_df' not in st.session_state or st.session_state['types_df'] is None:
-        st.warning("⚠️ Veuillez d'abord définir les types de variables dans la page Variables.")
-        return
+    df = st.session_state["df_selected"]
+    types_df = st.session_state["types_df"]
 
-    df = st.session_state['df_selected']
-    types_df = st.session_state['types_df']
+    st.success("✅ Fichier importé et types de variables détectés.")
 
-    # --- 2️⃣ Sélection des colonnes à analyser ---
-    st.subheader("Colonnes à inclure dans l'analyse")
-    cols_selected = st.multiselect("Choisir les variables :", df.columns.tolist(), default=df.columns.tolist())
-    if not cols_selected:
-        st.warning("⚠️ Veuillez sélectionner au moins une colonne.")
-        return
-
-    df = df[cols_selected]
-    types_df = types_df[types_df['variable'].isin(cols_selected)]
-
-    # --- 3️⃣ Calcul du summary ---
+    # --- 2️⃣ Tableau résumé descriptif ---
+    st.subheader("Résumé descriptif des variables")
     summary = descriptive_analysis(df, types_df)
-
-    # --- 4️⃣ Affichage des résultats ---
-    st.subheader("Résumé descriptif par variable")
+    
     for var, stats in summary.items():
-        st.markdown(f"### {var} ({types_df.loc[types_df['variable']==var,'type'].values[0]})")
+        st.markdown(f"**{var}**")
         st.json(stats)
+
+    # --- 3️⃣ Graphiques descriptifs ---
+    st.subheader("Visualisations des variables")
+    output_folder = "plots"
+    plot_descriptive(df, types_df, output_folder=output_folder)
+
+    # Liste des fichiers générés
+    plot_files = sorted([f for f in os.listdir(output_folder) if f.endswith(".png")])
+    if not plot_files:
+        st.warning("Aucun graphique généré.")
+        return
+
+    # --- Navigation avec boutons ---
+    if "plot_index" not in st.session_state:
+        st.session_state.plot_index = 0
+
+    col1, col2, col3 = st.columns([1,2,1])
+    with col1:
+        if st.button("⬅️ Précédent"):
+            if st.session_state.plot_index > 0:
+                st.session_state.plot_index -= 1
+    with col3:
+        if st.button("Suivant ➡️"):
+            if st.session_state.plot_index < len(plot_files) - 1:
+                st.session_state.plot_index += 1
+
+    # Affichage du graphique courant
+    plot_path = os.path.join(output_folder, plot_files[st.session_state.plot_index])
+    st.image(plot_path, use_column_width=True)
+    st.caption(f"Graphique {st.session_state.plot_index + 1} / {len(plot_files)} : {plot_files[st.session_state.plot_index]}")
