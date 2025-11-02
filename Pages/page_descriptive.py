@@ -1,31 +1,37 @@
 import streamlit as st
-
-def app():
-    st.header("Statistiques descriptives")
-    st.write("Ici nous allons réaliser les statistiques descriptive de ton étude")
-
-import streamlit as st
+import pandas as pd
 from modules.IA_STAT_descriptive_251125 import descriptive_analysis
-from modules.IA_STAT_Illustrations_251125 import plot_descriptive
 
 def app():
-    st.header("📊 Analyse descriptive")
+    st.title("📊 Analyse Descriptive")
 
-    # Vérification de session_state
-    if 'df_selected' not in st.session_state or 'types_results' not in st.session_state:
-        st.warning("Veuillez d'abord importer un fichier et détecter les types de variables dans les pages Fichier et Variables.")
-        st.stop()
+    # --- 1️⃣ Vérification des données ---
+    if 'df_selected' not in st.session_state or st.session_state['df_selected'] is None:
+        st.warning("⚠️ Veuillez d'abord importer et sélectionner un fichier dans la page Fichier.")
+        return
 
-    df = st.session_state['cleaned_data']
-    types_df = st.session_state['types_results']
+    if 'types_df' not in st.session_state or st.session_state['types_df'] is None:
+        st.warning("⚠️ Veuillez d'abord définir les types de variables dans la page Variables.")
+        return
 
-    # Analyse descriptive
+    df = st.session_state['df_selected']
+    types_df = st.session_state['types_df']
+
+    # --- 2️⃣ Sélection des colonnes à analyser ---
+    st.subheader("Colonnes à inclure dans l'analyse")
+    cols_selected = st.multiselect("Choisir les variables :", df.columns.tolist(), default=df.columns.tolist())
+    if not cols_selected:
+        st.warning("⚠️ Veuillez sélectionner au moins une colonne.")
+        return
+
+    df = df[cols_selected]
+    types_df = types_df[types_df['variable'].isin(cols_selected)]
+
+    # --- 3️⃣ Calcul du summary ---
     summary = descriptive_analysis(df, types_df)
-    st.subheader("Résumé statistique")
-    st.write(summary)
 
-    # Graphiques descriptifs
-    st.subheader("Graphiques descriptifs")
-    plot_descriptive(df, types_df, output_folder="plots")
-    st.success("Graphiques générés !")
-
+    # --- 4️⃣ Affichage des résultats ---
+    st.subheader("Résumé descriptif par variable")
+    for var, stats in summary.items():
+        st.markdown(f"### {var} ({types_df.loc[types_df['variable']==var,'type'].values[0]})")
+        st.json(stats)
