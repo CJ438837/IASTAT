@@ -1,15 +1,16 @@
 import pandas as pd
 import numpy as np
+from typing import Union
 
-def detect_variable_types(file_path: str, sheet_name=None):
+def detect_variable_types(input_data: Union[str, pd.DataFrame], sheet_name=None):
     """
-    Détecte automatiquement le type des variables dans un fichier CSV ou Excel.
+    Détecte automatiquement le type des variables dans un fichier CSV/Excel
+    ou dans un DataFrame déjà chargé.
     Types possibles : numérique, catégorielle, binaire.
-    Gère les fichiers Excel à feuille unique ou multiple.
     Les valeurs manquantes sont ignorées dans l’analyse.
     
     Args:
-        file_path (str): chemin vers le fichier CSV ou Excel
+        input_data (str or pd.DataFrame): chemin vers le fichier CSV/Excel ou DataFrame
         sheet_name (str/int, optional): nom ou index de la feuille (Excel). 
                                         Si None, toutes les feuilles sont traitées.
     
@@ -17,22 +18,27 @@ def detect_variable_types(file_path: str, sheet_name=None):
         dict: clé = nom de la feuille (ou 'data'), valeur = DataFrame des types détectés
         dict: clé = nom de la feuille, valeur = DataFrame correspondant
     """
-    
-    # --- 1️⃣ Lecture du fichier ---
-    if file_path.endswith(('.xls', '.xlsx')):
-        if sheet_name is None:
-            all_sheets = pd.read_excel(file_path, sheet_name=None)
+
+    # --- 1️⃣ Lecture du fichier si input_data est un chemin ---
+    if isinstance(input_data, pd.DataFrame):
+        all_sheets = {'data': input_data.copy()}
+    elif isinstance(input_data, str):
+        if input_data.endswith(('.xls', '.xlsx')):
+            if sheet_name is None:
+                all_sheets = pd.read_excel(input_data, sheet_name=None)
+            else:
+                all_sheets = {sheet_name: pd.read_excel(input_data, sheet_name=sheet_name)}
+        elif input_data.endswith('.csv'):
+            all_sheets = {'data': pd.read_csv(input_data, sep=None, engine='python')}
         else:
-            all_sheets = {sheet_name: pd.read_excel(file_path, sheet_name=sheet_name)}
-    elif file_path.endswith('.csv'):
-        all_sheets = {'data': pd.read_csv(file_path, sep=None, engine='python')}
+            raise ValueError("Format non supporté. Utiliser .csv, .xls ou .xlsx")
     else:
-        raise ValueError("Format non supporté. Utiliser .csv, .xls ou .xlsx")
+        raise TypeError("input_data doit être un chemin de fichier ou un DataFrame")
 
     types_results = {}
     cleaned_data = {}
 
-    # --- 2️⃣ Boucle sur chaque feuille ---
+    # --- 2️⃣ Boucle sur chaque feuille / DataFrame ---
     for sheet, df in all_sheets.items():
         df = df.dropna(axis=1, how='all')  # supprime colonnes complètement vides
         results = []
