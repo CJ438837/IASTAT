@@ -1,135 +1,154 @@
-import streamlit as st
 import pandas as pd
-import scipy.stats as stats
 import itertools
+import seaborn as sns
+import matplotlib.pyplot as plt
+from scipy import stats
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.linear_model import LinearRegression, LogisticRegression
+import numpy as np
 
-
-def propose_tests_interactif_streamlit(types_df, distribution_df, df, mots_cles=None, generation_mode=False):
-
+def propose_tests_interactif_auto(types_df, distribution_df, df, mots_cles=None, apparie=False):
     """
-    Interface Streamlit pour parcourir les tests proposés sans rechargement de page.
+    Version non interactive : exécute automatiquement les tests statistiques adaptés.
+    Retourne un dictionnaire des résultats.
     """
+    num_vars = types_df[types_df['type'] == "numérique"]['variable'].tolist()
+    cat_vars = types_df[types_df['type'].isin(['catégorielle', 'binaire'])]['variable'].tolist()
+    results = []
 
-    # --- 1️⃣ Construction des tests possibles ---
-    numeric_vars = types_df[types_df["type"].str.contains("num", case=False, na=False)]["variable"].tolist()
-    cat_vars = types_df[types_df["type"].str.contains("cat", case=False, na=False)]["variable"].tolist()
+    # --- 1️⃣ Numérique vs Catégoriel ---
+    for num, cat in itertools.product(num_vars, cat_vars):
+        n_modalites = df[cat].dropna().nunique()
+        verdict = distribution_df.loc[distribution_df['variable'] == num, 'verdict'].values[0]
 
-    tests_possibles = []
-    for var1, var2 in itertools.combinations(df.columns, 2):
-        if var1 in numeric_vars and var2 in cat_vars:
-            tests_possibles.append({
-                "var1": var1, "var2": var2, "test": "t-test de Student",
-                "description": f"Compare la moyenne de {var1} selon les groupes de {var2}."
-            })
-        elif var1 in numeric_vars and var2 in numeric_vars:
-            tests_possibles.append({
-                "var1": var1, "var2": var2, "test": "Corrélation de Pearson",
-                "description": f"Mesure la corrélation entre {var1} et {var2}."
-            })
-        elif var1 in cat_vars and var2 in cat_vars:
-            tests_possibles.append({
-                "var1": var1, "var2": var2, "test": "Chi² d’indépendance",
-                "description": f"Teste l’indépendance entre {var1} et {var2}."
-            })
-
-    if not tests_possibles:
-        st.warning("Aucun test statistique pertinent n’a été trouvé.")
-        return
-
-    # --- 2️⃣ État persisté (mais sans rechargement forcé) ---
-    if "test_index" not in st.session_state:
-        st.session_state.test_index = 0
-    if "results" not in st.session_state:
-        st.session_state.results = []
-
-    # Sélection du test courant
-    i = st.session_state.test_index
-    test_courant = tests_possibles[i]
-
-    # --- 3️⃣ Affichage du test courant ---
-    st.markdown("---")
-    st.subheader(f"🧪 Test {i + 1} / {len(tests_possibles)} : {test_courant['test']}")
-    st.write(test_courant["description"])
-    st.caption(f"Variables : **{test_courant['var1']}** et **{test_courant['var2']}**")
-
-    # --- 4️⃣ Choix des paramètres ---
-    alpha = st.slider(
-        "Seuil de signification (alpha)", 0.01, 0.1, 0.05, step=0.01,
-        key=f"alpha_{i}"
-    )
-    apparie = st.radio(
-        "Apparié ?", ("Non", "Oui"), index=0,
-        key=f"apparie_{i}"
-    )
-
-    # --- 5️⃣ Boutons sans rechargement ---
-    col_prev, col_run, col_next = st.columns([1, 2, 1])
-
-    if col_prev.button("⬅️ Précédent", key=f"prev_{i}", use_container_width=True):
-        if i > 0:
-            st.session_state.test_index -= 1
-
-    if col_next.button("Suivant ➡️", key=f"next_{i}", use_container_width=True):
-        if i < len(tests_possibles) - 1:
-            st.session_state.test_index += 1
-
-    # Exécution du test sans recharger
-    if col_run.button("▶️ Exécuter ce test", key=f"run_{i}", use_container_width=True):
-        resultat = executer_test(df, test_courant, alpha, apparie)
-        st.session_state.results.append(resultat)
-        st.session_state.last_result = resultat
-
-    # --- 6️⃣ Affichage du dernier résultat ---
-    if "last_result" in st.session_state:
-        st.markdown("### 🧾 Résultat du test")
-        res = st.session_state.last_result
-        st.write(pd.DataFrame([res]))
-
-    # --- 7️⃣ Tableau cumulatif des résultats ---
-    if st.session_state.results:
-        st.markdown("---")
-        st.subheader("📊 Résultats cumulés")
-        df_res = pd.DataFrame(st.session_state.results)
-        st.dataframe(df_res, use_container_width=True)
-        st.download_button(
-            "💾 Télécharger les résultats",
-            df_res.to_csv(index=False).encode("utf-8"),
-            "resultats_tests.csv",
-            "text/csv"
-        )
-
-
-def executer_test(df, test_courant, alpha, apparie):
-    """Exécute un test statistique et retourne un dictionnaire de résultat."""
-    var1 = test_courant["var1"]
-    var2 = test_courant["var2"]
-    test = test_courant["test"]
-    resultat = {"test": test, "var1": var1, "var2": var2, "alpha": alpha}
-
-    try:
-        if test == "t-test de Student":
-            groupes = df[var2].dropna().unique()
-            if len(groupes) == 2:
-                g1 = df[df[var2] == groupes[0]][var1].dropna()
-                g2 = df[df[var2] == groupes[1]][var1].dropna()
-                stat, p = stats.ttest_ind(g1, g2, equal_var=False)
-                resultat.update({"statistique": stat, "p_value": p})
+        # Choix du test
+        if n_modalites == 2:
+            if verdict == "Normal":
+                test_name = "t-test apparié" if apparie else "t-test indépendant"
             else:
-                resultat["erreur"] = "Variable catégorielle à plus de 2 groupes."
+                test_name = "Wilcoxon" if apparie else "Mann-Whitney"
+        elif n_modalites > 2:
+            test_name = "ANOVA" if verdict == "Normal" else "Kruskal-Wallis"
+        else:
+            continue
 
-        elif test == "Corrélation de Pearson":
-            stat, p = stats.pearsonr(df[var1].dropna(), df[var2].dropna())
-            resultat.update({"corrélation": stat, "p_value": p})
+        groupes = df.groupby(cat)[num].apply(list)
 
-        elif test == "Chi² d’indépendance":
-            contingency = pd.crosstab(df[var1], df[var2])
-            stat, p, _, _ = stats.chi2_contingency(contingency)
-            resultat.update({"statistique": stat, "p_value": p})
+        try:
+            if test_name == "t-test apparié":
+                stat, p = stats.ttest_rel(groupes.iloc[0], groupes.iloc[1])
+            elif test_name == "t-test indépendant":
+                stat, p = stats.ttest_ind(groupes.iloc[0], groupes.iloc[1])
+            elif test_name == "Wilcoxon":
+                stat, p = stats.wilcoxon(groupes.iloc[0], groupes.iloc[1])
+            elif test_name == "Mann-Whitney":
+                stat, p = stats.mannwhitneyu(groupes.iloc[0], groupes.iloc[1])
+            elif test_name == "ANOVA":
+                stat, p = stats.f_oneway(*groupes)
+            elif test_name == "Kruskal-Wallis":
+                stat, p = stats.kruskal(*groupes)
+            else:
+                continue
 
-        if "p_value" in resultat:
-            resultat["significatif"] = "Oui ✅" if resultat["p_value"] < alpha else "Non ❌"
+            # Graphique
+            fig, ax = plt.subplots()
+            sns.boxplot(x=cat, y=num, data=df, ax=ax)
+            ax.set_title(f"{test_name} : {num} vs {cat}")
 
-    except Exception as e:
-        resultat["erreur"] = str(e)
+            # Résumé
+            results.append({
+                "type": "num_vs_cat",
+                "variables": (num, cat),
+                "test": test_name,
+                "stat": stat,
+                "pvalue": p,
+                "significatif": p < 0.05,
+                "interpretation": (
+                    f"La variable '{num}' a un impact significatif sur '{cat}'."
+                    if p < 0.05 else f"Aucun impact significatif entre '{num}' et '{cat}'."
+                ),
+                "figure": fig
+            })
 
-    return resultat
+        except Exception as e:
+            results.append({
+                "type": "num_vs_cat",
+                "variables": (num, cat),
+                "test": test_name,
+                "erreur": str(e)
+            })
+
+    # --- 2️⃣ Deux variables continues ---
+    for var1, var2 in itertools.combinations(num_vars, 2):
+        verdict1 = distribution_df.loc[distribution_df['variable'] == var1, 'verdict'].values[0]
+        verdict2 = distribution_df.loc[distribution_df['variable'] == var2, 'verdict'].values[0]
+        test_type = "Pearson" if verdict1 == "Normal" and verdict2 == "Normal" else "Spearman"
+
+        x, y = df[var1].dropna(), df[var2].dropna()
+        corr, p = (stats.pearsonr(x, y) if test_type == "Pearson"
+                   else stats.spearmanr(x, y))
+
+        fig, ax = plt.subplots()
+        sns.scatterplot(x=var1, y=var2, data=df, ax=ax)
+        ax.set_title(f"Corrélation ({test_type}) : {var1} vs {var2}")
+
+        results.append({
+            "type": "num_vs_num",
+            "variables": (var1, var2),
+            "test": f"Corrélation {test_type}",
+            "stat": corr,
+            "pvalue": p,
+            "significatif": p < 0.05,
+            "interpretation": (
+                f"{var1} et {var2} sont significativement corrélés."
+                if p < 0.05 else f"Aucune corrélation significative entre {var1} et {var2}."
+            ),
+            "figure": fig
+        })
+
+    # --- 3️⃣ Deux variables catégorielles ---
+    for var1, var2 in itertools.combinations(cat_vars, 2):
+        contingency_table = pd.crosstab(df[var1], df[var2])
+        try:
+            if contingency_table.size <= 4:
+                stat, p = stats.fisher_exact(contingency_table)
+                test_name = "Fisher exact"
+            else:
+                stat, p, dof, expected = stats.chi2_contingency(contingency_table)
+                test_name = "Chi²"
+
+            fig, ax = plt.subplots()
+            sns.heatmap(contingency_table, annot=True, fmt="d", cmap="coolwarm", ax=ax)
+            ax.set_title(f"{test_name} : {var1} vs {var2}")
+
+            results.append({
+                "type": "cat_vs_cat",
+                "variables": (var1, var2),
+                "test": test_name,
+                "stat": stat,
+                "pvalue": p,
+                "significatif": p < 0.05,
+                "interpretation": (
+                    f"'{var1}' dépend significativement de '{var2}'."
+                    if p < 0.05 else f"Aucune dépendance significative entre '{var1}' et '{var2}'."
+                ),
+                "figure": fig
+            })
+        except Exception as e:
+            results.append({
+                "type": "cat_vs_cat",
+                "variables": (var1, var2),
+                "test": "Chi²/Fisher",
+                "erreur": str(e)
+            })
+
+    # --- 4️⃣ Résumé final ---
+    return pd.DataFrame([{
+        "Test": r["test"],
+        "Variables": f"{r['variables'][0]} vs {r['variables'][1]}",
+        "Statistique": round(r.get("stat", np.nan), 4) if "stat" in r else None,
+        "p-value": round(r.get("pvalue", np.nan), 4) if "pvalue" in r else None,
+        "Significatif": r.get("significatif", False),
+        "Interprétation": r.get("interpretation", r.get("erreur", "")),
+    } for r in results]), results
