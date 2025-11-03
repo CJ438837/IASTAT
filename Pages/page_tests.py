@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from modules.IA_STAT_interactif_auto import propose_tests_interactif_auto
+from modules.IA_STAT_execute_test import executer_test  # fonction que je t'ai donnée
 
 def app():
     st.title("📊 Tests statistiques interactifs")
@@ -22,55 +23,63 @@ def app():
     distribution_df = st.session_state["distribution_df"].copy()
     mots_cles = st.session_state.get("keywords", [])
 
-    # --- 3️⃣ Initialisation des tests ---
-    if "tests_generes" not in st.session_state:
-        st.session_state.tests_generes = propose_tests_interactif_auto(
-            types_df, distribution_df, df, mots_cles
-        )
-        st.session_state.index_test = 0  # test courant
+    # --- 3️⃣ Normalisation des colonnes ---
+    rename_dict = {}
+    for col in types_df.columns:
+        lower = col.lower()
+        if lower in ["var", "variable_name", "nom", "column"]:
+            rename_dict[col] = "variable"
+        elif lower in ["var_type", "type_var", "variable_type", "kind"]:
+            rename_dict[col] = "type"
+    types_df.rename(columns=rename_dict, inplace=True)
 
-    if not st.session_state.tests_generes:
-        st.info("Aucun test n'a été généré.")
+    expected_cols = {"variable", "type"}
+    if not expected_cols.issubset(types_df.columns):
+        st.error(f"⚠️ Le tableau des types de variables doit contenir les colonnes : {expected_cols}. "
+                 f"Colonnes actuelles : {types_df.columns.tolist()}")
         st.stop()
 
-    # --- 4️⃣ Navigation test par test ---
-    index = st.session_state.index_test
-    test_courant = st.session_state.tests_generes[index]
+    st.success("✅ Toutes les données nécessaires ont été chargées.")
 
-    st.subheader(f"Test {index + 1} / {len(st.session_state.tests_generes)}")
-    st.write(f"**Type de test :** {test_courant['type']}")
-    st.write(f"**Variables :** {test_courant['variables']}")
-    
-    # Choix apparié si applicable
-    if test_courant['type'] in ["t-test", "Mann-Whitney"]:
-        test_courant['apparie'] = st.radio(
-            "Données appariées ?", 
-            ["Non", "Oui"], 
-            index=0 if not test_courant.get('apparie', False) else 1,
-            key=f"app_{index}"
-        ) == "Oui"
+    # --- 4️⃣ Génération des tests ---
+    if "tests_generes" not in st.session_state:
+        st.session_state.tests_generes, _ = propose_tests_interactif_auto(types_df, distribution_df, df, mots_cles)
 
-    # Bouton pour exécuter le test courant
-    if st.button("Exécuter ce test", key=f"run_{index}"):
-        try:
-            # Ici on exécute le test (fonction spécifique déjà dans propose_tests_interactif_auto)
-            test_courant['resultat'] = st.session_state.tests_generes[index]['fonction'](
-                df, test_courant['variables'], apparie=test_courant.get('apparie', False)
-            )
-            st.success("Test exécuté avec succès !")
-        except Exception as e:
-            st.error(f"Erreur lors de l'exécution du test : {e}")
+    tests = st.session_state.tests_generes
+    if not tests:
+        st.warning("Aucun test n'a été généré.")
+        st.stop()
 
-    # --- 5️⃣ Flèches navigation ---
+    # --- 5️⃣ Navigation test par test ---
+    if "test_index" not in st.session_state:
+        st.session_state.test_index = 0
+
+    test_idx = st.session_state.test_index
+    test_dict = tests[test_idx]
+
+    st.subheader(f"Test {test_idx+1} / {len(tests)} : {test_dict['type']}")
+    st.write(f"Variables : {', '.join(test_dict['variables'])}")
+    st.write(f"Justification : {test_dict.get('justification','')}")
+
+    # --- 6️⃣ Choix appariement si applicable ---
+    apparie = False
+    if test_dict['type'] in ["t-test", "Mann-Whitney"]:
+        apparie = st.radio("Les données sont-elles appariées ?", ("Non", "Oui"), key=f"apparie_{test_idx}") == "Oui"
+
+    # --- 7️⃣ Bouton exécuter le test ---
+    if st.button("▶️ Exécuter ce test", key=f"exec_{test_idx}"):
+        with st.spinner("Calcul en cours... ⏳"):
+            resultats = executer_test(df, test_dict, apparie)
+            st.success("✅ Test exécuté !")
+            st.write("Résultats :", resultats)
+
+    # --- 8️⃣ Flèches navigation ---
     col1, col2, col3 = st.columns([1,2,1])
     with col1:
-        if st.button("⬅ Précédent") and index > 0:
-            st.session_state.index_test -= 1
+        if st.button("⬅️ Précédent", key="prev_test"):
+            if st.session_state.test_index > 0:
+                st.session_state.test_index -= 1
     with col3:
-        if st.button("Suivant ➡") and index < len(st.session_state.tests_generes) - 1:
-            st.session_state.index_test += 1
-
-    # --- 6️⃣ Affichage résultats si déjà exécuté ---
-    if 'resultat' in test_courant:
-        st.write("### Résultat du test :")
-        st.write(test_courant['resultat'])
+        if st.button("Suivant ➡️", key="next_test"):
+            if st.session_state.test_index < len(tests) - 1:
+                st.session_state.test_index += 1
