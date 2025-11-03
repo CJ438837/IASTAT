@@ -53,7 +53,7 @@ def app():
     if st.button("🧠 Générer les propositions de tests"):
         with st.spinner("Analyse en cours... ⏳"):
             st.session_state.tests_generes = propose_tests_interactif_streamlit(
-                types_df, distribution_df, df, mots_cles, generation_mode=True
+               df, types_df, distribution_df, mots_cles, generation_mode=True
             )
             st.session_state.test_index = 0
             st.session_state.tests_resultats = {}
@@ -99,3 +99,4 @@ def app():
             if st.button("Suivant ➡️", disabled=(current_index == total_tests - 1)):
                 st.session_state.test_index = min(total_tests - 1, current_index + 1)
                 st.rerun()
+
