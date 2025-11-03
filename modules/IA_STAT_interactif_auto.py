@@ -1,225 +1,192 @@
 import pandas as pd
-import numpy as np
 import itertools
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy import stats
-from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LinearRegression
-import prince  # pour ACM (analyse des correspondances multiples)
+from sklearn.decomposition import PCA
+from sklearn.linear_model import LinearRegression, LogisticRegression
+import numpy as np
 
-def propose_tests_interactif_auto(df, types_df, distribution_df, mots_cles=None, apparie=False):
+def propose_tests_interactif_auto(types_df, distribution_df, df, mots_cles=None, apparie=False, execute_regression=True, execute_pca=True, execute_mca=True):
     """
-    Version automatique de IA_STAT_interactif2 : exécute tous les tests statistiques
-    sans interaction utilisateur.
-    Retourne un (DataFrame résumé, liste de résultats détaillés).
+    Exécution automatique de tous les tests statistiques pour Streamlit.
+    Arguments :
+        types_df : DataFrame avec colonnes 'variable' et 'type'
+        distribution_df : DataFrame avec colonnes 'variable' et 'verdict' (Normal / Non normal)
+        df : DataFrame principal
+        mots_cles : liste de mots-clés (optionnel)
+        apparie : bool, True si les tests à 2 groupes doivent être appariés
+        execute_regression : bool, True pour exécuter régression linéaire
+        execute_pca : bool, True pour exécuter PCA
+        execute_mca : bool, True pour exécuter MCA
+    Retour :
+        summary_df : DataFrame récapitulatif des tests
+        all_results : dictionnaire avec résultats détaillés
     """
-    results = []
+
+    # --- Normalisation des colonnes de types_df ---
+    rename_dict = {}
+    for col in types_df.columns:
+        lower = col.lower()
+        if lower in ["var", "variable_name", "nom", "column"]:
+            rename_dict[col] = "variable"
+        elif lower in ["var_type", "type_var", "variable_type", "kind"]:
+            rename_dict[col] = "type"
+    types_df = types_df.rename(columns=rename_dict)
+
+    expected_cols = {"variable", "type"}
+    if not expected_cols.issubset(types_df.columns):
+        raise ValueError(f"Le tableau des types doit contenir les colonnes {expected_cols}, "
+                         f"colonnes actuelles : {types_df.columns.tolist()}")
+
     num_vars = types_df[types_df['type'] == "numérique"]['variable'].tolist()
     cat_vars = types_df[types_df['type'].isin(['catégorielle', 'binaire'])]['variable'].tolist()
 
-    # ======================
-    # 1️⃣ NUMÉRIQUE vs CATÉGORIEL
-    # ======================
+    summary_records = []
+    all_results = {}
+
+    # -------------------------------
+    # 1️⃣ Numérique vs Catégoriel
+    # -------------------------------
     for num, cat in itertools.product(num_vars, cat_vars):
-        try:
-            n_modalites = df[cat].dropna().nunique()
-            verdict = distribution_df.loc[distribution_df['variable'] == num, 'verdict'].values[0]
-            groupes = df.groupby(cat)[num].apply(list)
-            if len(groupes) < 2:
-                continue
+        n_modalites = df[cat].dropna().nunique()
+        verdict = distribution_df.loc[distribution_df['variable'] == num, 'verdict'].values[0]
 
-            # Choix du test
-            if n_modalites == 2:
-                if verdict == "Normal":
-                    test_name = "t-test apparié" if apparie else "t-test indépendant"
-                else:
-                    test_name = "Wilcoxon" if apparie else "Mann-Whitney"
-            elif n_modalites > 2:
-                test_name = "ANOVA" if verdict == "Normal" else "Kruskal-Wallis"
+        if n_modalites == 2:
+            if verdict == "Normal":
+                test_name = "t-test"
             else:
-                continue
+                test_name = "Mann-Whitney"
+        elif n_modalites > 2:
+            if verdict == "Normal":
+                test_name = "ANOVA"
+            else:
+                test_name = "Kruskal-Wallis"
+        else:
+            test_name = "unknown"
 
-            # Exécution du test
-            if test_name == "t-test apparié":
-                stat, p = stats.ttest_rel(groupes.iloc[0], groupes.iloc[1])
-            elif test_name == "t-test indépendant":
-                stat, p = stats.ttest_ind(groupes.iloc[0], groupes.iloc[1])
-            elif test_name == "Wilcoxon":
-                stat, p = stats.wilcoxon(groupes.iloc[0], groupes.iloc[1])
+        groupes = df.groupby(cat)[num].apply(list)
+        stat, p = None, None
+        try:
+            if test_name == "t-test":
+                stat, p = (stats.ttest_rel(groupes.iloc[0], groupes.iloc[1])
+                           if apparie else stats.ttest_ind(groupes.iloc[0], groupes.iloc[1]))
             elif test_name == "Mann-Whitney":
-                stat, p = stats.mannwhitneyu(groupes.iloc[0], groupes.iloc[1])
+                stat, p = (stats.wilcoxon(groupes.iloc[0], groupes.iloc[1])
+                           if apparie else stats.mannwhitneyu(groupes.iloc[0], groupes.iloc[1]))
             elif test_name == "ANOVA":
                 stat, p = stats.f_oneway(*groupes)
             elif test_name == "Kruskal-Wallis":
                 stat, p = stats.kruskal(*groupes)
-            else:
-                continue
 
-            # Graphique
-            fig, ax = plt.subplots()
-            sns.boxplot(x=cat, y=num, data=df, ax=ax)
-            ax.set_title(f"{test_name} : {num} vs {cat}")
+            sns.boxplot(x=cat, y=num, data=df)
+            plt.title(f"{test_name} : {num} vs {cat}")
+            plt.show()
 
-            results.append({
-                "type": "num_vs_cat",
-                "variables": (num, cat),
-                "test": test_name,
-                "stat": stat,
-                "pvalue": p,
-                "significatif": p < 0.05,
-                "figure": fig,
-                "interpretation": (
-                    f"Différences significatives entre les groupes de '{cat}' sur '{num}'."
-                    if p < 0.05 else f"Aucune différence significative détectée entre groupes de '{cat}'."
-                )
-            })
         except Exception as e:
-            results.append({"type": "num_vs_cat", "variables": (num, cat), "erreur": str(e)})
+            print(f"Erreur {num} vs {cat} : {e}")
 
-    # ======================
-    # 2️⃣ NUMÉRIQUE vs NUMÉRIQUE (corrélation + régression)
-    # ======================
+        summary_records.append({"Variable_num": num, "Variable_cat": cat, "Test": test_name, "Statistique": stat, "p-value": p})
+        all_results[f"{num}_vs_{cat}"] = {"stat": stat, "p": p}
+
+    # -------------------------------
+    # 2️⃣ Deux variables numériques
+    # -------------------------------
     for var1, var2 in itertools.combinations(num_vars, 2):
-        try:
-            verdict1 = distribution_df.loc[distribution_df['variable'] == var1, 'verdict'].values[0]
-            verdict2 = distribution_df.loc[distribution_df['variable'] == var2, 'verdict'].values[0]
-            test_type = "Pearson" if verdict1 == "Normal" and verdict2 == "Normal" else "Spearman"
+        verdict1 = distribution_df.loc[distribution_df['variable'] == var1, 'verdict'].values[0]
+        verdict2 = distribution_df.loc[distribution_df['variable'] == var2, 'verdict'].values[0]
+        test_type = "Pearson" if verdict1 == "Normal" and verdict2 == "Normal" else "Spearman"
 
-            x, y = df[var1].dropna(), df[var2].dropna()
-            corr, p = (stats.pearsonr(x, y) if test_type == "Pearson"
-                       else stats.spearmanr(x, y))
+        if test_type == "Pearson":
+            corr, p = stats.pearsonr(df[var1].dropna(), df[var2].dropna())
+        else:
+            corr, p = stats.spearmanr(df[var1].dropna(), df[var2].dropna())
 
-            # Graphique
-            fig, ax = plt.subplots()
-            sns.regplot(x=var1, y=var2, data=df, ax=ax)
-            ax.set_title(f"Corrélation ({test_type}) : {var1} vs {var2}")
+        sns.scatterplot(x=var1, y=var2, data=df)
+        plt.title(f"Corrélation ({test_type}) : {var1} vs {var2}")
+        plt.show()
 
-            results.append({
-                "type": "num_vs_num",
-                "variables": (var1, var2),
-                "test": f"Corrélation {test_type}",
-                "stat": corr,
-                "pvalue": p,
-                "significatif": p < 0.05,
-                "figure": fig,
-                "interpretation": (
-                    f"{var1} et {var2} sont corrélés (r={corr:.2f})."
-                    if p < 0.05 else f"Aucune corrélation significative entre {var1} et {var2}."
-                )
-            })
+        summary_records.append({"Variable_num1": var1, "Variable_num2": var2, "Test": f"Corrélation ({test_type})", "Statistique": corr, "p-value": p})
+        all_results[f"{var1}_vs_{var2}"] = {"stat": corr, "p": p}
 
-            # Régression linéaire
-            model = LinearRegression().fit(x.values.reshape(-1, 1), y)
-            r2 = model.score(x.values.reshape(-1, 1), y)
-            results.append({
-                "type": "regression",
-                "variables": (var1, var2),
-                "test": "Régression linéaire",
-                "stat": r2,
-                "pvalue": None,
-                "significatif": r2 > 0.3,
-                "figure": fig,
-                "interpretation": f"R² = {r2:.3f} → {var1} explique {r2*100:.1f}% de la variance de {var2}."
-            })
-        except Exception as e:
-            results.append({"type": "num_vs_num", "variables": (var1, var2), "erreur": str(e)})
-
-    # ======================
-    # 3️⃣ CATÉGORIEL vs CATÉGORIEL
-    # ======================
+    # -------------------------------
+    # 3️⃣ Deux variables catégorielles
+    # -------------------------------
     for var1, var2 in itertools.combinations(cat_vars, 2):
+        contingency_table = pd.crosstab(df[var1], df[var2])
         try:
-            contingency = pd.crosstab(df[var1], df[var2])
-            if contingency.size <= 4:
-                stat, p = stats.fisher_exact(contingency)
+            if contingency_table.size <= 4:
+                stat, p = stats.fisher_exact(contingency_table)
                 test_name = "Fisher exact"
             else:
-                stat, p, _, _ = stats.chi2_contingency(contingency)
+                stat, p, dof, expected = stats.chi2_contingency(contingency_table)
                 test_name = "Chi²"
 
-            fig, ax = plt.subplots()
-            sns.heatmap(contingency, annot=True, fmt="d", cmap="coolwarm", ax=ax)
-            ax.set_title(f"{test_name} : {var1} vs {var2}")
+            sns.heatmap(contingency_table, annot=True, fmt="d", cmap="coolwarm")
+            plt.title(f"{test_name} : {var1} vs {var2}")
+            plt.show()
 
-            results.append({
-                "type": "cat_vs_cat",
-                "variables": (var1, var2),
-                "test": test_name,
-                "stat": stat,
-                "pvalue": p,
-                "significatif": p < 0.05,
-                "figure": fig,
-                "interpretation": (
-                    f"Association significative entre '{var1}' et '{var2}'."
-                    if p < 0.05 else f"Aucune association significative entre '{var1}' et '{var2}'."
-                )
-            })
         except Exception as e:
-            results.append({"type": "cat_vs_cat", "variables": (var1, var2), "erreur": str(e)})
+            print(f"Erreur test catégoriel {var1} vs {var2} : {e}")
 
-    # ======================
-    # 4️⃣ ACP (PCA)
-    # ======================
-    try:
-        if len(num_vars) >= 2:
-            X = df[num_vars].dropna()
-            X_scaled = StandardScaler().fit_transform(X)
-            pca = PCA(n_components=2)
-            components = pca.fit_transform(X_scaled)
+        summary_records.append({"Variable_cat1": var1, "Variable_cat2": var2, "Test": test_name, "Statistique": stat, "p-value": p})
+        all_results[f"{var1}_vs_{var2}"] = {"stat": stat, "p": p}
 
-            fig, ax = plt.subplots()
-            sns.scatterplot(x=components[:, 0], y=components[:, 1])
-            ax.set_title("Analyse en composantes principales (ACP)")
+    # -------------------------------
+    # 4️⃣ Régression linéaire multiple
+    # -------------------------------
+    if execute_regression and len(num_vars) > 1:
+        X = df[num_vars].dropna()
+        for cible_col in num_vars:
+            y = X[cible_col]
+            X_pred = X.drop(columns=[cible_col])
+            model = LinearRegression()
+            model.fit(X_pred, y)
+            y_pred = model.predict(X_pred)
+            residus = y - y_pred
+            stat, p = stats.shapiro(residus)
 
-            results.append({
-                "type": "ACP",
-                "test": "PCA",
-                "stat": pca.explained_variance_ratio_.sum(),
-                "pvalue": None,
-                "significatif": True,
-                "figure": fig,
-                "interpretation": f"Les deux premières composantes expliquent {pca.explained_variance_ratio_.sum()*100:.1f}% de la variance totale."
-            })
-    except Exception as e:
-        results.append({"type": "ACP", "erreur": str(e)})
+            summary_records.append({"Regression_var_dep": cible_col, "R²": model.score(X_pred, y), "Shapiro_stat": stat, "Shapiro_p": p})
+            all_results[f"regression_{cible_col}"] = {"R²": model.score(X_pred, y), "residus_shapiro": (stat, p)}
 
-    # ======================
-    # 5️⃣ ACM (MCA)
-    # ======================
-    try:
-        if len(cat_vars) >= 2:
+    # -------------------------------
+    # 5️⃣ PCA
+    # -------------------------------
+    if execute_pca and len(num_vars) > 1:
+        X_scaled = StandardScaler().fit_transform(df[num_vars].dropna())
+        pca = PCA()
+        components = pca.fit_transform(X_scaled)
+        explained_variance = pca.explained_variance_ratio_
+        cum_var = explained_variance.cumsum()
+        n_comp = (cum_var < 0.8).sum() + 1
+
+        summary_records.append({"PCA_n_comp_80%": n_comp})
+        all_results["PCA"] = {"explained_variance": explained_variance, "components": components}
+
+    # -------------------------------
+    # 6️⃣ MCA
+    # -------------------------------
+    if execute_mca and len(cat_vars) > 1:
+        try:
+            import prince
+            df_cat = df[cat_vars].dropna()
             mca = prince.MCA(n_components=2, random_state=42)
-            mca = mca.fit(df[cat_vars].astype(str))
-            coords = mca.row_coordinates(df[cat_vars].astype(str))
+            mca = mca.fit(df_cat)
+            all_results["MCA"] = {"row_coordinates": mca.row_coordinates(df_cat), "col_coordinates": mca.column_coordinates(df_cat)}
+        except ImportError:
+            print("Module 'prince' non installé pour MCA")
 
-            fig, ax = plt.subplots()
-            sns.scatterplot(x=coords[0], y=coords[1])
-            ax.set_title("Analyse des correspondances multiples (ACM)")
+    # -------------------------------
+    # 7️⃣ Régression logistique
+    # -------------------------------
+    for cat in cat_vars:
+        if df[cat].dropna().nunique() == 2:
+            X = df[num_vars].dropna()
+            y = df[cat].loc[X.index]
+            model = LogisticRegression(max_iter=1000)
+            model.fit(X, y)
+            all_results[f"logistic_{cat}"] = {"coef": dict(zip(num_vars, model.coef_[0])), "intercept": model.intercept_[0]}
 
-            results.append({
-                "type": "ACM",
-                "test": "MCA",
-                "stat": mca.explained_inertia_.sum(),
-                "pvalue": None,
-                "significatif": True,
-                "figure": fig,
-                "interpretation": f"Les deux premières dimensions expliquent {mca.explained_inertia_.sum()*100:.1f}% de l'inertie totale."
-            })
-    except Exception as e:
-        results.append({"type": "ACM", "erreur": str(e)})
-
-    # ======================
-    # 6️⃣ RÉSUMÉ FINAL
-    # ======================
-    summary = pd.DataFrame([{
-        "Test": r.get("test"),
-        "Variables": f"{r.get('variables', ('', ''))[0]} vs {r.get('variables', ('', ''))[1]}",
-        "Statistique": round(r.get("stat", np.nan), 4) if "stat" in r else None,
-        "p-value": round(r.get("pvalue", np.nan), 4) if "pvalue" in r and r["pvalue"] is not None else None,
-        "Significatif": r.get("significatif", False),
-        "Interprétation": r.get("interpretation", r.get("erreur", ""))
-    } for r in results])
-
-    return summary, results
+    summary_df = pd.DataFrame(summary_records)
+    return summary_df, all_results
