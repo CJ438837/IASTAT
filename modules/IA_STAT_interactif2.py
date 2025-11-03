@@ -4,7 +4,8 @@ import scipy.stats as stats
 import itertools
 
 
-def propose_tests_interactif_streamlit(types_df, distribution_df, df, mots_cles):
+def propose_tests_interactif_streamlit(types_df, distribution_df, df, mots_cles=None, generation_mode=False):
+
     """
     Interface Streamlit pour parcourir les tests proposés sans rechargement de page.
     """
