@@ -22,31 +22,52 @@ def app():
     distribution_df = st.session_state["distribution_df"].copy()
     mots_cles = st.session_state.get("keywords", [])
 
-    # --- Bouton pour lancer les tests ---
+    # --- Initialisation session_state pour navigation ---
     if "test_index" not in st.session_state:
         st.session_state["test_index"] = 0
     if "test_results" not in st.session_state:
         st.session_state["test_results"] = []
 
-    if st.button("🧠 Exécuter les tests bivariés"):
-        st.session_state["test_results"] = propose_tests_bivariés(df, types_df, distribution_df, mots_cles)
+    # --- Génération des tests ---
+    if st.button("🧠 Générer les tests bivariés"):
+        st.session_state["test_results"] = propose_tests_bivariés(df, types_df, distribution_df, mots_cles, interactive=False)
         st.session_state["test_index"] = 0
         st.success(f"✅ {len(st.session_state['test_results'])} tests générés !")
 
-    # --- Navigation des tests ---
+    # --- Navigation test par test ---
     if st.session_state["test_results"]:
         test_index = st.session_state["test_index"]
         test_data = st.session_state["test_results"][test_index]
 
-        # Affichage tableau
-        st.markdown("### 📄 Résultat du test")
-        st.dataframe(test_data["result_df"])
+        st.markdown(f"### Test {test_index+1} / {len(st.session_state['test_results'])}")
 
-        # Affichage graphique
-        st.markdown("### 📊 Graphique associé")
-        st.pyplot(test_data["fig"])
+        # --- Option apparié/non apparié pour tests 2 groupes ---
+        if test_data["type"] == "num_vs_cat" and test_data["n_modalites"] == 2:
+            apparie = st.radio(
+                f"Test {test_data['num_var']} vs {test_data['cat_var']}: Les groupes sont-ils appariés ?",
+                ("Non", "Oui"),
+                index=0
+            ) == "Oui"
+            test_data["apparie"] = apparie
 
-        # Navigation test suivant / précédent
+        # --- Exécution du test individuel ---
+        if st.button("▶️ Exécuter ce test"):
+            try:
+                test_result = test_data["execute"](df, test_data)
+                st.session_state["test_results"][test_index]["result_df"] = test_result["result_df"]
+                st.session_state["test_results"][test_index]["fig"] = test_result["fig"]
+            except Exception as e:
+                st.error(f"❌ Erreur lors de l'exécution du test : {e}")
+
+        # --- Affichage du tableau et graphique si déjà exécuté ---
+        if "result_df" in test_data and "fig" in test_data:
+            st.markdown("#### 📄 Résultat du test")
+            st.dataframe(test_data["result_df"])
+
+            st.markdown("#### 📊 Graphique associé")
+            st.pyplot(test_data["fig"])
+
+        # --- Navigation test précédent / suivant ---
         col1, col2, col3 = st.columns([1,2,1])
         with col1:
             if st.button("⬅️ Test précédent") and test_index > 0:
@@ -54,6 +75,3 @@ def app():
         with col3:
             if st.button("Test suivant ➡️") and test_index < len(st.session_state["test_results"]) - 1:
                 st.session_state["test_index"] += 1
-
-        # Information de navigation
-        st.markdown(f"**Test {test_index+1} / {len(st.session_state['test_results'])}**")
