@@ -29,7 +29,7 @@ def app():
         st.session_state["test_results"] = []
 
     if st.button("🧠 Générer les tests bivariés"):
-        st.session_state["test_results"] = propose_tests_bivariés(df, types_df, distribution_df, mots_cles)
+        st.session_state["test_results"] = propose_tests_bivaries(df, types_df, distribution_df, mots_cles)
         st.session_state["test_index"] = 0
         st.success(f"✅ {len(st.session_state['test_results'])} tests générés !")
 
@@ -68,3 +68,4 @@ def app():
 
         # Information de navigation
         st.markdown(f"**Test {test_index+1} / {len(st.session_state['test_results'])}**")
+
