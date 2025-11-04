@@ -28,8 +28,8 @@ def app():
     if "test_results" not in st.session_state:
         st.session_state["test_results"] = []
 
-    if st.button("🧠 Générer les tests bivariés"):
-        st.session_state["test_results"] = propose_tests_bivaries(df, types_df, distribution_df, mots_cles)
+    if st.button("🧠 Exécuter les tests bivariés"):
+        st.session_state["test_results"] = propose_tests_bivariés(df, types_df, distribution_df, mots_cles)
         st.session_state["test_index"] = 0
         st.success(f"✅ {len(st.session_state['test_results'])} tests générés !")
 
@@ -37,17 +37,6 @@ def app():
     if st.session_state["test_results"]:
         test_index = st.session_state["test_index"]
         test_data = st.session_state["test_results"][test_index]
-
-        # --- Sélection apparié/non apparié pour tests numériques à 2 groupes ---
-        if test_data.get("test_type") in ["t-test", "Mann-Whitney"]:
-            apparie = st.radio(
-                f"Le test {test_data['test_name']} pour {test_data['var_num']} vs {test_data['var_cat']} est-il apparié ?",
-                ("Non", "Oui"),
-                index=0
-            ) == "Oui"
-            test_data["apparie"] = apparie
-            # Recalcul du test avec la sélection
-            test_data["result_df"], test_data["fig"] = test_data["recalc_func"](apparie)
 
         # Affichage tableau
         st.markdown("### 📄 Résultat du test")
@@ -68,4 +57,3 @@ def app():
 
         # Information de navigation
         st.markdown(f"**Test {test_index+1} / {len(st.session_state['test_results'])}**")
-
