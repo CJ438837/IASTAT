@@ -1,53 +1,49 @@
+# Pages/page_testsbivaries.py
 import streamlit as st
-from modules.IA_STAT_testbivaries import propose_tests_bivariés
+from modules.IA_STAT_bivarie_auto import propose_tests_bivariés
 
 def app():
-    st.title("📊 Tests bivariés automatiques")
+    st.title("📊 Tests statistiques bivariés")
 
-    if "df_selected" not in st.session_state or \
-       "types_df" not in st.session_state or \
-       "distribution_df" not in st.session_state:
-        st.warning("Importez les fichiers dans les pages précédentes.")
+    if "df_selected" not in st.session_state:
+        st.warning("Veuillez d'abord importer un fichier dans la page Fichier.")
+        st.stop()
+    if "types_df" not in st.session_state:
+        st.warning("Veuillez d'abord détecter les types de variables dans la page Variables.")
+        st.stop()
+    if "distribution_df" not in st.session_state:
+        st.warning("Veuillez d'abord analyser la distribution des données dans la page Distribution.")
         st.stop()
 
     df = st.session_state["df_selected"].copy()
     types_df = st.session_state["types_df"].copy()
     distribution_df = st.session_state["distribution_df"].copy()
-    mots_cles = st.session_state.get("keywords", [])
 
-    if "test_index" not in st.session_state:
-        st.session_state["test_index"] = 0
-    if "test_results" not in st.session_state:
-        st.session_state["test_results"] = []
+    st.markdown("### ⚙️ Exécution des tests bivariés")
 
-    if st.button("🧠 Générer tous les tests bivariés"):
-        st.session_state["test_results"] = propose_tests_bivariés(df, types_df, distribution_df)
-        st.session_state["test_index"] = 0
-        st.success(f"{len(st.session_state['test_results'])} tests générés !")
+    results_list = propose_tests_bivariés(df, types_df, distribution_df)
 
-    if st.session_state["test_results"]:
-        idx = st.session_state["test_index"]
-        test_data = st.session_state["test_results"][idx]
+    for i, test_data in enumerate(results_list):
+        st.markdown(f"### Test {i+1} : {test_data['test_name']} ({test_data['num']} vs {test_data['cat']})")
 
-        # --- Apparié si nécessaire ---
-        apparie = test_data.get("apparie_needed", False)
-        if apparie:
-            apparie_choice = st.radio(f"Le test {test_data['test_name']} ({test_data['num']} vs {test_data['cat']}) est-il apparié ?", ("Non","Oui"))
-            test_data["result_df"]["Apparié"] = apparie_choice == "Oui"
+        # Affichage graphique
+        st.pyplot(test_data['fig'])
 
-        st.markdown("### 📄 Résultat")
+        # Si test nécessite choix apparié/non
+        if test_data['apparie_needed']:
+            apparie_choice = st.radio(f"Le test {test_data['test_name']} est-il apparié ?", ("Non","Oui"), key=f"apparie_{i}")
+            apparié = apparie_choice=="Oui"
+
+            g = test_data["groupes"]
+            if test_data["test_name"]=="t-test":
+                stat, p = (stats.ttest_rel(g.iloc[0], g.iloc[1]) if apparié else stats.ttest_ind(g.iloc[0], g.iloc[1]))
+            elif test_data["test_name"]=="Mann-Whitney":
+                stat, p = (stats.wilcoxon(g.iloc[0], g.iloc[1]) if apparié else stats.mannwhitneyu(g.iloc[0], g.iloc[1]))
+
+            # Mise à jour tableau
+            test_data["result_df"].at[0, "Apparié"] = apparié
+            test_data["result_df"].at[0, "Statistique"] = stat
+            test_data["result_df"].at[0, "p-value"] = p
+
+        # Affichage du tableau pour ce test
         st.dataframe(test_data["result_df"])
-
-        st.markdown("### 📊 Graphique")
-        st.pyplot(test_data["fig"])
-
-        # --- Navigation ---
-        col1, col2, col3 = st.columns([1,2,1])
-        with col1:
-            if st.button("⬅️ Test précédent") and idx>0:
-                st.session_state["test_index"] -= 1
-        with col3:
-            if st.button("Test suivant ➡️") and idx<len(st.session_state["test_results"])-1:
-                st.session_state["test_index"] += 1
-
-        st.markdown(f"**Test {idx+1} / {len(st.session_state['test_results'])}**")
