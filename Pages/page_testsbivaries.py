@@ -1,6 +1,6 @@
 # Pages/page_testsbivaries.py
 import streamlit as st
-from modules.IA_STAT_testsbivarie import propose_tests_bivariés
+from modules.IA_STAT_testsbivaries import propose_tests_bivariés
 
 def app():
     st.title("📊 Tests statistiques bivariés")
@@ -47,4 +47,5 @@ def app():
 
         # Affichage du tableau pour ce test
         st.dataframe(test_data["result_df"])
+
 
