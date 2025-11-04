@@ -1,81 +1,123 @@
-import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-from scipy import stats
 import itertools
+import seaborn as sns
+import matplotlib.pyplot as plt
+from scipy import stats
 import numpy as np
 
-def propose_tests_bivariés(df, types_df, distribution_df):
-    """Propose tous les tests bivariés automatiquement, un par un."""
+def propose_tests_bivariés(df, types_df, distribution_df, mots_cles=None, apparie_dict=None):
+    """
+    Exécution automatique des tests bivariés pour Streamlit.
     
-    num_vars = types_df[types_df['type']=="numérique"]['variable'].tolist()
-    cat_vars = types_df[types_df['type'].isin(['catégorielle','binaire'])]['variable'].tolist()
-    
-    test_list = []
-    
-    # 1️⃣ Numérique vs Catégoriel
+    Arguments :
+        df : DataFrame principal
+        types_df : DataFrame avec colonnes 'variable' et 'type' ('numérique', 'catégorielle', 'binaire')
+        distribution_df : DataFrame avec colonnes 'variable' et 'verdict' (Normal / Non normal)
+        mots_cles : liste de mots-clés (optionnel, pour PubMed ou rapport)
+        apparie_dict : dictionnaire optionnel {'var_num_vs_var_cat': True/False} pour tests appariés
+    Retour :
+        results_list : liste de DataFrames, un par test exécuté
+    """
+
+    # Normalisation des colonnes de types_df
+    rename_dict = {col: col.lower() for col in types_df.columns}
+    types_df = types_df.rename(columns=rename_dict)
+    types_df.rename(columns={"var": "variable", "variable_name": "variable",
+                             "nom": "variable", "column": "variable",
+                             "var_type": "type", "type_var": "type",
+                             "variable_type": "type", "kind": "type"}, inplace=True)
+
+    num_vars = types_df[types_df['type'] == "numérique"]['variable'].tolist()
+    cat_vars = types_df[types_df['type'].isin(['catégorielle', 'binaire'])]['variable'].tolist()
+
+    results_list = []
+
+    # -------------------------------
+    # Numérique vs Catégorielle
+    # -------------------------------
     for num, cat in itertools.product(num_vars, cat_vars):
         n_modalites = df[cat].dropna().nunique()
-        verdict = distribution_df.loc[distribution_df['variable']==num, 'verdict'].values[0]
-        
+        verdict = distribution_df.loc[distribution_df['variable'] == num, 'verdict'].values[0]
+
         if n_modalites == 2:
             test_name = "t-test" if verdict=="Normal" else "Mann-Whitney"
         elif n_modalites > 2:
             test_name = "ANOVA" if verdict=="Normal" else "Kruskal-Wallis"
         else:
             test_name = "unknown"
-        
+
         groupes = df.groupby(cat)[num].apply(list)
-        apparie_needed = test_name in ["t-test","Mann-Whitney"]
-        
-        # DataFrame résultat par test
+        stat, p = None, None
+
+        # Déterminer apparié/non apparié pour ce test
+        key = f"{num}_vs_{cat}"
+        apparie = apparie_dict.get(key, False) if apparie_dict else False
+
+        try:
+            if test_name == "t-test":
+                stat, p = stats.ttest_rel(groupes.iloc[0], groupes.iloc[1]) if apparie else stats.ttest_ind(groupes.iloc[0], groupes.iloc[1])
+            elif test_name == "Mann-Whitney":
+                stat, p = stats.wilcoxon(groupes.iloc[0], groupes.iloc[1]) if apparie else stats.mannwhitneyu(groupes.iloc[0], groupes.iloc[1])
+            elif test_name == "ANOVA":
+                stat, p = stats.f_oneway(*groupes)
+            elif test_name == "Kruskal-Wallis":
+                stat, p = stats.kruskal(*groupes)
+
+            # Graphique
+            fig, ax = plt.subplots()
+            sns.boxplot(x=cat, y=num, data=df, ax=ax)
+            ax.set_title(f"{test_name} : {num} vs {cat}")
+            plt.close(fig)  # fermeture pour Streamlit
+
+        except Exception as e:
+            print(f"Erreur t-test / Mann-Whitney / ANOVA / Kruskal {num} vs {cat} : {e}")
+
+        # Tableau résultat par test
         result_df = pd.DataFrame([{
             "Variable_num": num,
             "Variable_cat": cat,
             "Test": test_name,
-            "Apparié": None if apparie_needed else False,
-            "Statistique": None if apparie_needed else 0,
-            "p-value": None if apparie_needed else 0
+            "Apparié": apparie,
+            "Statistique": stat,
+            "p-value": p
         }])
-        
-        test_list.append({
-            "test_name": test_name,
-            "num": num,
-            "cat": cat,
-            "groupes": groupes,
-            "apparie_needed": apparie_needed,
-            "result_df": result_df
-        })
-    
-    # 2️⃣ Deux variables numériques
+        results_list.append({"result_df": result_df, "fig": fig})
+
+    # -------------------------------
+    # Numérique vs Numérique
+    # -------------------------------
     for var1, var2 in itertools.combinations(num_vars, 2):
         verdict1 = distribution_df.loc[distribution_df['variable']==var1, 'verdict'].values[0]
         verdict2 = distribution_df.loc[distribution_df['variable']==var2, 'verdict'].values[0]
         test_type = "Pearson" if verdict1=="Normal" and verdict2=="Normal" else "Spearman"
-        
-        if test_type=="Pearson":
-            corr, p = stats.pearsonr(df[var1].dropna(), df[var2].dropna())
-        else:
-            corr, p = stats.spearmanr(df[var1].dropna(), df[var2].dropna())
-        
+
+        try:
+            if test_type=="Pearson":
+                stat, p = stats.pearsonr(df[var1].dropna(), df[var2].dropna())
+            else:
+                stat, p = stats.spearmanr(df[var1].dropna(), df[var2].dropna())
+
+            # Graphique
+            fig, ax = plt.subplots()
+            sns.scatterplot(x=var1, y=var2, data=df, ax=ax)
+            ax.set_title(f"{test_type} corrélation : {var1} vs {var2}")
+            plt.close(fig)
+
+        except Exception as e:
+            print(f"Erreur corrélation {var1} vs {var2} : {e}")
+
         result_df = pd.DataFrame([{
             "Variable_num1": var1,
             "Variable_num2": var2,
             "Test": f"Corrélation ({test_type})",
-            "Statistique": corr,
+            "Statistique": stat,
             "p-value": p
         }])
-        
-        test_list.append({
-            "test_name": f"Corrélation ({test_type})",
-            "var1": var1,
-            "var2": var2,
-            "result_df": result_df,
-            "apparie_needed": False
-        })
-    
-    # 3️⃣ Deux variables catégorielles
+        results_list.append({"result_df": result_df, "fig": fig})
+
+    # -------------------------------
+    # Catégorielle vs Catégorielle
+    # -------------------------------
     for var1, var2 in itertools.combinations(cat_vars, 2):
         contingency_table = pd.crosstab(df[var1], df[var2])
         try:
@@ -85,10 +127,16 @@ def propose_tests_bivariés(df, types_df, distribution_df):
             else:
                 stat, p, dof, expected = stats.chi2_contingency(contingency_table)
                 test_name = "Chi²"
-        except Exception:
-            stat, p = None, None
-            test_name = "Chi² / Fisher"
-        
+
+            # Graphique
+            fig, ax = plt.subplots()
+            sns.heatmap(contingency_table, annot=True, fmt="d", cmap="coolwarm", ax=ax)
+            ax.set_title(f"{test_name} : {var1} vs {var2}")
+            plt.close(fig)
+
+        except Exception as e:
+            print(f"Erreur Chi² / Fisher {var1} vs {var2} : {e}")
+
         result_df = pd.DataFrame([{
             "Variable_cat1": var1,
             "Variable_cat2": var2,
@@ -96,90 +144,6 @@ def propose_tests_bivariés(df, types_df, distribution_df):
             "Statistique": stat,
             "p-value": p
         }])
-        
-        test_list.append({
-            "test_name": test_name,
-            "var1": var1,
-            "var2": var2,
-            "contingency_table": contingency_table,
-            "result_df": result_df,
-            "apparie_needed": False
-        })
-    
-    return test_list
+        results_list.append({"result_df": result_df, "fig": fig})
 
-
-def app():
-    st.title("📊 Tests statistiques bivariés")
-    
-    if "df_selected" not in st.session_state:
-        st.warning("Veuillez d'abord importer un fichier dans la page Fichier.")
-        st.stop()
-    if "types_df" not in st.session_state:
-        st.warning("Veuillez d'abord détecter les types de variables dans la page Variables.")
-        st.stop()
-    if "distribution_df" not in st.session_state:
-        st.warning("Veuillez d'abord analyser la distribution des données dans la page Distribution.")
-        st.stop()
-    
-    df = st.session_state["df_selected"].copy()
-    types_df = st.session_state["types_df"].copy()
-    distribution_df = st.session_state["distribution_df"].copy()
-    
-    lancer_tests = st.button("🧠 Exécuter tous les tests bivariés")
-    
-    if lancer_tests:
-        with st.spinner("Exécution des tests bivariés... ⏳"):
-            test_list = propose_tests_bivariés(df, types_df, distribution_df)
-            
-            for i, test_data in enumerate(test_list):
-                st.markdown(f"### 🔹 Test {i+1} : {test_data['test_name']}")
-                
-                # 1️⃣ Tests appariés
-                if test_data.get("apparie_needed", False):
-                    apparie_choice = st.radio(f"Le test {test_data['test_name']} est-il apparié ?", ("Non","Oui"), key=f"apparie_{i}")
-                    apparie = apparie_choice=="Oui"
-                    
-                    g = test_data["groupes"]
-                    try:
-                        if test_data["test_name"]=="t-test":
-                            stat, p = (stats.ttest_rel(g.iloc[0], g.iloc[1]) if apparie else stats.ttest_ind(g.iloc[0], g.iloc[1]))
-                        elif test_data["test_name"]=="Mann-Whitney":
-                            stat, p = (stats.wilcoxon(g.iloc[0], g.iloc[1]) if apparie else stats.mannwhitneyu(g.iloc[0], g.iloc[1]))
-                        else:
-                            stat, p = None, None
-                    except Exception as e:
-                        st.error(f"❌ Erreur pendant l'exécution de {test_data['test_name']} : {e}")
-                        stat, p = None, None
-                    
-                    test_data["result_df"].at[0, "Apparié"] = apparie
-                    test_data["result_df"].at[0, "Statistique"] = stat
-                    test_data["result_df"].at[0, "p-value"] = p
-                    
-                    # Boxplot
-                    fig, ax = plt.subplots()
-                    sns.boxplot(x=test_data['cat'], y=test_data['num'], data=df, ax=ax)
-                    ax.set_title(f"{test_data['num']} vs {test_data['cat']} ({test_data['test_name']})")
-                    st.pyplot(fig)
-                    plt.close(fig)
-                
-                # 2️⃣ Tests non appariés (corrélation et chi²)
-                else:
-                    if test_data['test_name'].startswith("Corrélation"):
-                        fig, ax = plt.subplots()
-                        ax.scatter(df[test_data['var1']], df[test_data['var2']], alpha=0.6)
-                        ax.set_xlabel(test_data['var1'])
-                        ax.set_ylabel(test_data['var2'])
-                        ax.set_title(f"{test_data['var1']} vs {test_data['var2']} ({test_data['test_name']})")
-                        st.pyplot(fig)
-                        plt.close(fig)
-                    else:
-                        # Chi² ou Fisher
-                        fig, ax = plt.subplots()
-                        sns.heatmap(test_data['contingency_table'], annot=True, fmt="d", cmap="coolwarm", ax=ax)
-                        ax.set_title(f"{test_data.get('var1','')} vs {test_data.get('var2','')} ({test_data['test_name']})")
-                        st.pyplot(fig)
-                        plt.close(fig)
-                
-                # Affichage tableau résultat
-                st.dataframe(test_data['result_df'])
+    return results_list
