@@ -15,7 +15,8 @@ page = st.sidebar.radio("Aller à :", [
     "Variables",
     "Descriptive",
     "Distribution",
-    "Tests"
+    "Tests bivariés",
+    "Tests multivariés"
 ])
 
 # --- Chargement des pages ---
@@ -40,6 +41,7 @@ elif page == "Tests bivariés":
 elif page == "Tests multivariés":
     from Pages import page_testsmulti
     page_testsmulti.app()
+
 
 
 
