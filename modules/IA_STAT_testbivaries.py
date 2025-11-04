@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from scipy import stats
 import numpy as np
 
-def propose_tests_bivariés(df, types_df, distribution_df, mots_cles=None, apparie_dict=None):
+def propose_tests_bivaries(df, types_df, distribution_df, mots_cles=None, apparie_dict=None):
     """
     Exécution automatique des tests bivariés pour Streamlit.
     
