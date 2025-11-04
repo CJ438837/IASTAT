@@ -1,19 +1,12 @@
 import streamlit as st
 import pandas as pd
-
-# 🔹 Import de toutes les fonctions de tests
-from modules.IA_STAT_interactif_auto import (
-    propose_tests_interactif_auto_anova,
-    propose_tests_interactif_auto_kruskal,
-    propose_tests_interactif_auto_ttest,
-    propose_tests_interactif_auto_mannwhitney,
-    propose_tests_interactif_auto_chi2,
-    propose_tests_interactif_auto_correlation
-)
-
+import matplotlib.pyplot as plt
+import seaborn as sns
+from modules.IA_STAT_interactif_auto import propose_tests_interactif_auto
+import numpy as np
 
 def app():
-    st.title("📊 Tests statistiques interactifs")
+    st.title("📊 Tests statistiques automatiques")
 
     # --- 1️⃣ Vérifications préalables ---
     if "df_selected" not in st.session_state:
@@ -26,59 +19,115 @@ def app():
         st.warning("Veuillez d'abord analyser la distribution des données dans la page Distribution.")
         st.stop()
 
-    # --- 2️⃣ Récupération des données ---
+    # --- 2️⃣ Récupération des données depuis la session ---
     df = st.session_state["df_selected"].copy()
     types_df = st.session_state["types_df"].copy()
     distribution_df = st.session_state["distribution_df"].copy()
     mots_cles = st.session_state.get("keywords", [])
 
-    # --- 3️⃣ Vérification et renommage des colonnes ---
-    rename_dict = {}
-    for col in types_df.columns:
-        lower = col.lower()
-        if lower in ["var", "variable_name", "nom", "column"]:
-            rename_dict[col] = "variable"
-        elif lower in ["var_type", "type_var", "variable_type", "kind"]:
-            rename_dict[col] = "type"
-    types_df.rename(columns=rename_dict, inplace=True)
+    # --- 3️⃣ Sélection des options utilisateur ---
+    st.markdown("### ⚙️ Options des tests")
+    apparie = st.radio(
+        "Les tests à deux groupes sont-ils appariés ?",
+        ("Non", "Oui"),
+        index=0
+    ) == "Oui"
 
-    expected_cols = {"variable", "type"}
-    if not expected_cols.issubset(types_df.columns):
-        st.error(f"⚠️ Le tableau des types de variables doit contenir les colonnes : {expected_cols}. "
-                 f"Colonnes actuelles : {types_df.columns.tolist()}")
-        st.stop()
+    lancer_tests = st.button("🧠 Exécuter tous les tests")
 
-    # --- 4️⃣ Interface utilisateur ---
-    st.success("✅ Toutes les données nécessaires ont été chargées.")
-    st.markdown("### 💡 Choisis un test à exécuter")
+    if lancer_tests:
+        with st.spinner("Exécution des tests en cours... ⏳"):
+            try:
+                summary_df, all_results = propose_tests_interactif_auto(
+                    types_df, distribution_df, df, mots_cles, apparie=apparie
+                )
+                st.success("✅ Tous les tests ont été exécutés avec succès !")
 
-    test_options = {
-        "ANOVA": propose_tests_interactif_auto_anova,
-        "Kruskal-Wallis": propose_tests_interactif_auto_kruskal,
-        "t-test (Student)": propose_tests_interactif_auto_ttest,
-        "Mann-Whitney": propose_tests_interactif_auto_mannwhitney,
-        "Chi²": propose_tests_interactif_auto_chi2,
-        "Corrélations": propose_tests_interactif_auto_correlation
-    }
+                # --- 4️⃣ Affichage du résumé des tests ---
+                st.markdown("### 📄 Résumé des tests")
+                st.dataframe(summary_df)
 
-    choix_test = st.selectbox("📈 Sélectionne le test à exécuter :", list(test_options.keys()))
-    apparie = st.radio("Données appariées ?", ("Non", "Oui"), key=f"apparie_{choix_test}") == "Oui"
+                # --- 5️⃣ Graphiques numériques vs catégorielles (boxplots) ---
+                st.markdown("### 📊 Boxplots Numérique vs Catégoriel")
+                num_vars = types_df[types_df['type'] == "numérique"]['variable'].tolist()
+                cat_vars = types_df[types_df['type'].isin(['catégorielle', 'binaire'])]['variable'].tolist()
 
-    lancer = st.button("🚀 Exécuter ce test")
+                for num, cat in [(n, c) for n in num_vars for c in cat_vars]:
+                    fig, ax = plt.subplots()
+                    sns.boxplot(x=cat, y=num, data=df, ax=ax)
+                    ax.set_title(f"{num} vs {cat}")
+                    st.pyplot(fig)
+                    plt.close(fig)
 
-    if lancer:
-        with st.spinner("Analyse en cours... ⏳"):
-            summary_df, all_results = test_options[choix_test](types_df, distribution_df, df, mots_cles, apparie)
+                # --- 6️⃣ PCA pour variables numériques ---
+                if len(num_vars) > 1:
+                    from sklearn.preprocessing import StandardScaler
+                    from sklearn.decomposition import PCA
 
-        st.success(f"✅ Test {choix_test} exécuté avec succès !")
-        st.markdown("### 📊 Résultats du test")
-        st.dataframe(summary_df)
+                    st.markdown("### 📈 PCA")
+                    X_scaled = StandardScaler().fit_transform(df[num_vars].dropna())
+                    pca = PCA()
+                    components = pca.fit_transform(X_scaled)
+                    explained_var = pca.explained_variance_ratio_.cumsum()
 
-        # 📥 Option de téléchargement
-        csv = summary_df.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 Télécharger les résultats (CSV)",
-            data=csv,
-            file_name=f"resultats_{choix_test}.csv",
-            mime="text/csv"
-        )
+                    # Projection individus PC1 vs PC2
+                    fig, ax = plt.subplots()
+                    ax.scatter(components[:,0], components[:,1], alpha=0.6)
+                    ax.set_xlabel("PC1")
+                    ax.set_ylabel("PC2")
+                    ax.set_title("Projection individus PC1 vs PC2")
+                    st.pyplot(fig)
+                    plt.close(fig)
+
+                    # Biplot
+                    fig, ax = plt.subplots()
+                    ax.scatter(components[:,0], components[:,1], alpha=0.5)
+                    for i, var in enumerate(num_vars):
+                        ax.arrow(0, 0,
+                                 pca.components_[0,i]*max(components[:,0]),
+                                 pca.components_[1,i]*max(components[:,1]),
+                                 color='red', alpha=0.7, head_width=0.05)
+                        ax.text(pca.components_[0,i]*max(components[:,0])*1.1,
+                                pca.components_[1,i]*max(components[:,1])*1.1,
+                                var, color='darkred', ha='center', va='center')
+                    ax.set_xlabel("PC1")
+                    ax.set_ylabel("PC2")
+                    ax.set_title("Biplot PCA")
+                    st.pyplot(fig)
+                    plt.close(fig)
+
+                # --- 7️⃣ MCA pour variables catégorielles ---
+                if len(cat_vars) > 1:
+                    try:
+                        import prince
+                        st.markdown("### 📊 MCA")
+                        df_cat = df[cat_vars].dropna()
+                        mca = prince.MCA(n_components=2, random_state=42).fit(df_cat)
+                        coords = mca.column_coordinates(df_cat)
+
+                        # Projection des individus
+                        fig, ax = plt.subplots()
+                        ind_coords = mca.row_coordinates(df_cat)
+                        ax.scatter(ind_coords[0], ind_coords[1], alpha=0.6)
+                        ax.set_xlabel("Dim 1")
+                        ax.set_ylabel("Dim 2")
+                        ax.set_title("Projection individus (MCA)")
+                        st.pyplot(fig)
+                        plt.close(fig)
+
+                        # Projection des catégories
+                        fig, ax = plt.subplots()
+                        ax.scatter(coords[0], coords[1], color='red', alpha=0.7)
+                        for i, label in enumerate(coords.index):
+                            ax.text(coords.iloc[i,0], coords.iloc[i,1], label, fontsize=9, color='darkred')
+                        ax.set_xlabel("Dim 1")
+                        ax.set_ylabel("Dim 2")
+                        ax.set_title("Projection catégories (MCA)")
+                        st.pyplot(fig)
+                        plt.close(fig)
+
+                    except ImportError:
+                        st.warning("Module 'prince' non installé. Pour MCA, exécutez : pip install prince")
+
+            except Exception as e:
+                st.error(f"❌ Une erreur est survenue pendant l'exécution des tests : {e}")
