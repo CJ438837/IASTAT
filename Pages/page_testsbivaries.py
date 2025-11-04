@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-from modules.IA_STAT_testbivaries import propose_tests_bivariés
+from modules.IA_STAT_testbivaries import propose_tests_bivaries
 
 def app():
     st.title("📊 Tests bivariés automatiques")
@@ -30,7 +30,7 @@ def app():
 
     # --- Génération des tests ---
     if st.button("🧠 Générer les tests bivariés"):
-        st.session_state["test_results"] = propose_tests_bivariés(df, types_df, distribution_df, mots_cles, interactive=False)
+        st.session_state["test_results"] = propose_tests_bivaries(df, types_df, distribution_df, mots_cles, interactive=False)
         st.session_state["test_index"] = 0
         st.success(f"✅ {len(st.session_state['test_results'])} tests générés !")
 
@@ -75,3 +75,4 @@ def app():
         with col3:
             if st.button("Test suivant ➡️") and test_index < len(st.session_state["test_results"]) - 1:
                 st.session_state["test_index"] += 1
+
