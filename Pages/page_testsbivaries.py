@@ -1,20 +1,13 @@
 import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
 from modules.IA_STAT_testbivaries import propose_tests_bivariés
 
 def app():
     st.title("📊 Tests bivariés automatiques")
 
-    # --- Vérifications préalables ---
-    if "df_selected" not in st.session_state:
-        st.warning("Veuillez d'abord importer un fichier dans la page Fichier.")
-        st.stop()
-    if "types_df" not in st.session_state:
-        st.warning("Veuillez d'abord détecter les types de variables dans la page Variables.")
-        st.stop()
-    if "distribution_df" not in st.session_state:
-        st.warning("Veuillez d'abord analyser la distribution des données dans la page Distribution.")
+    if "df_selected" not in st.session_state or \
+       "types_df" not in st.session_state or \
+       "distribution_df" not in st.session_state:
+        st.warning("Importez les fichiers dans les pages précédentes.")
         st.stop()
 
     df = st.session_state["df_selected"].copy()
@@ -22,38 +15,39 @@ def app():
     distribution_df = st.session_state["distribution_df"].copy()
     mots_cles = st.session_state.get("keywords", [])
 
-    # --- Bouton pour lancer les tests ---
     if "test_index" not in st.session_state:
         st.session_state["test_index"] = 0
     if "test_results" not in st.session_state:
         st.session_state["test_results"] = []
 
-    if st.button("🧠 Exécuter les tests bivariés"):
-        st.session_state["test_results"] = propose_tests_bivariés(df, types_df, distribution_df, mots_cles)
+    if st.button("🧠 Générer tous les tests bivariés"):
+        st.session_state["test_results"] = propose_tests_bivariés(df, types_df, distribution_df)
         st.session_state["test_index"] = 0
-        st.success(f"✅ {len(st.session_state['test_results'])} tests générés !")
+        st.success(f"{len(st.session_state['test_results'])} tests générés !")
 
-    # --- Navigation des tests ---
     if st.session_state["test_results"]:
-        test_index = st.session_state["test_index"]
-        test_data = st.session_state["test_results"][test_index]
+        idx = st.session_state["test_index"]
+        test_data = st.session_state["test_results"][idx]
 
-        # Affichage tableau
-        st.markdown("### 📄 Résultat du test")
+        # --- Apparié si nécessaire ---
+        apparie = test_data.get("apparie_needed", False)
+        if apparie:
+            apparie_choice = st.radio(f"Le test {test_data['test_name']} ({test_data['num']} vs {test_data['cat']}) est-il apparié ?", ("Non","Oui"))
+            test_data["result_df"]["Apparié"] = apparie_choice == "Oui"
+
+        st.markdown("### 📄 Résultat")
         st.dataframe(test_data["result_df"])
 
-        # Affichage graphique
-        st.markdown("### 📊 Graphique associé")
+        st.markdown("### 📊 Graphique")
         st.pyplot(test_data["fig"])
 
-        # Navigation test suivant / précédent
+        # --- Navigation ---
         col1, col2, col3 = st.columns([1,2,1])
         with col1:
-            if st.button("⬅️ Test précédent") and test_index > 0:
+            if st.button("⬅️ Test précédent") and idx>0:
                 st.session_state["test_index"] -= 1
         with col3:
-            if st.button("Test suivant ➡️") and test_index < len(st.session_state["test_results"]) - 1:
+            if st.button("Test suivant ➡️") and idx<len(st.session_state["test_results"])-1:
                 st.session_state["test_index"] += 1
 
-        # Information de navigation
-        st.markdown(f"**Test {test_index+1} / {len(st.session_state['test_results'])}**")
+        st.markdown(f"**Test {idx+1} / {len(st.session_state['test_results'])}**")
