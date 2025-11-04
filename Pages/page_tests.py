@@ -1,8 +1,7 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
+
+# 🔹 Import de toutes les fonctions de tests
 from modules.IA_STAT_interactif_auto import (
     propose_tests_interactif_auto_anova,
     propose_tests_interactif_auto_kruskal,
@@ -12,134 +11,74 @@ from modules.IA_STAT_interactif_auto import (
     propose_tests_interactif_auto_correlation
 )
 
-def afficher_boxplots(df, num_vars, cat_vars):
-    """Affiche les boxplots Numérique vs Catégoriel"""
-    st.markdown("#### 📊 Visualisation : Boxplots")
-    for num, cat in [(n, c) for n in num_vars for c in cat_vars]:
-        fig, ax = plt.subplots()
-        sns.boxplot(x=cat, y=num, data=df, ax=ax)
-        ax.set_title(f"{num} vs {cat}")
-        st.pyplot(fig)
-        plt.close(fig)
-
 
 def app():
-    st.title("🧠 Tests statistiques interactifs")
+    st.title("📊 Tests statistiques interactifs")
 
+    # --- 1️⃣ Vérifications préalables ---
     if "df_selected" not in st.session_state:
-        st.warning("⚠️ Veuillez d'abord importer un fichier dans la page Fichier.")
+        st.warning("Veuillez d'abord importer un fichier dans la page Fichier.")
         st.stop()
     if "types_df" not in st.session_state:
-        st.warning("⚠️ Veuillez d'abord définir les types de variables dans la page Variables.")
+        st.warning("Veuillez d'abord détecter les types de variables dans la page Variables.")
         st.stop()
     if "distribution_df" not in st.session_state:
-        st.warning("⚠️ Veuillez d'abord analyser les distributions dans la page Distribution.")
+        st.warning("Veuillez d'abord analyser la distribution des données dans la page Distribution.")
         st.stop()
 
+    # --- 2️⃣ Récupération des données ---
     df = st.session_state["df_selected"].copy()
     types_df = st.session_state["types_df"].copy()
     distribution_df = st.session_state["distribution_df"].copy()
     mots_cles = st.session_state.get("keywords", [])
 
-    num_vars = types_df[types_df['type'] == "numérique"]['variable'].tolist()
-    cat_vars = types_df[types_df['type'].isin(['catégorielle', 'binaire'])]['variable'].tolist()
+    # --- 3️⃣ Vérification et renommage des colonnes ---
+    rename_dict = {}
+    for col in types_df.columns:
+        lower = col.lower()
+        if lower in ["var", "variable_name", "nom", "column"]:
+            rename_dict[col] = "variable"
+        elif lower in ["var_type", "type_var", "variable_type", "kind"]:
+            rename_dict[col] = "type"
+    types_df.rename(columns=rename_dict, inplace=True)
 
-    st.divider()
-    st.header("📈 Tests de comparaison de moyennes")
+    expected_cols = {"variable", "type"}
+    if not expected_cols.issubset(types_df.columns):
+        st.error(f"⚠️ Le tableau des types de variables doit contenir les colonnes : {expected_cols}. "
+                 f"Colonnes actuelles : {types_df.columns.tolist()}")
+        st.stop()
 
-    # --- ANOVA ---
-    st.subheader("ANOVA")
-    apparie_anova = st.radio("Les groupes sont-ils appariés ?", ("Non", "Oui"), key="anova_app", index=0) == "Oui"
-    if st.button("Lancer ANOVA"):
-        with st.spinner("Exécution du test ANOVA..."):
-            try:
-                summary_df, all_results = propose_tests_interactif_auto_anova(
-                    types_df, distribution_df, df, mots_cles, apparie=apparie_anova
-                )
-                st.success("✅ ANOVA exécutée avec succès !")
-                st.dataframe(summary_df)
-                afficher_boxplots(df, num_vars, cat_vars)
-            except Exception as e:
-                st.error(f"Erreur ANOVA : {e}")
+    # --- 4️⃣ Interface utilisateur ---
+    st.success("✅ Toutes les données nécessaires ont été chargées.")
+    st.markdown("### 💡 Choisis un test à exécuter")
 
-    # --- Kruskal-Wallis ---
-    st.subheader("Kruskal-Wallis")
-    apparie_kw = st.radio("Les groupes sont-ils appariés ?", ("Non", "Oui"), key="kw_app", index=0) == "Oui"
-    if st.button("Lancer Kruskal-Wallis"):
-        with st.spinner("Exécution du test de Kruskal-Wallis..."):
-            try:
-                summary_df, all_results = propose_tests_interactif_auto_kruskal(
-                    types_df, distribution_df, df, mots_cles, apparie=apparie_kw
-                )
-                st.success("✅ Test de Kruskal-Wallis exécuté avec succès !")
-                st.dataframe(summary_df)
-                afficher_boxplots(df, num_vars, cat_vars)
-            except Exception as e:
-                st.error(f"Erreur Kruskal-Wallis : {e}")
+    test_options = {
+        "ANOVA": propose_tests_interactif_auto_anova,
+        "Kruskal-Wallis": propose_tests_interactif_auto_kruskal,
+        "t-test (Student)": propose_tests_interactif_auto_ttest,
+        "Mann-Whitney": propose_tests_interactif_auto_mannwhitney,
+        "Chi²": propose_tests_interactif_auto_chi2,
+        "Corrélations": propose_tests_interactif_auto_correlation
+    }
 
-    # --- t-test ---
-    st.subheader("t-test")
-    apparie_ttest = st.radio("Les échantillons sont-ils appariés ?", ("Non", "Oui"), key="ttest_app", index=0) == "Oui"
-    if st.button("Lancer t-test"):
-        with st.spinner("Exécution du test t de Student..."):
-            try:
-                summary_df, all_results = propose_tests_interactif_auto_ttest(
-                    types_df, distribution_df, df, mots_cles, apparie=apparie_ttest
-                )
-                st.success("✅ t-test exécuté avec succès !")
-                st.dataframe(summary_df)
-                afficher_boxplots(df, num_vars, cat_vars)
-            except Exception as e:
-                st.error(f"Erreur t-test : {e}")
+    choix_test = st.selectbox("📈 Sélectionne le test à exécuter :", list(test_options.keys()))
+    apparie = st.radio("Données appariées ?", ("Non", "Oui"), key=f"apparie_{choix_test}") == "Oui"
 
-    # --- Mann-Whitney ---
-    st.subheader("Mann-Whitney")
-    apparie_mw = st.radio("Les échantillons sont-ils appariés ?", ("Non", "Oui"), key="mw_app", index=0) == "Oui"
-    if st.button("Lancer Mann-Whitney"):
-        with st.spinner("Exécution du test de Mann-Whitney..."):
-            try:
-                summary_df, all_results = propose_tests_interactif_auto_mannwhitney(
-                    types_df, distribution_df, df, mots_cles, apparie=apparie_mw
-                )
-                st.success("✅ Test de Mann-Whitney exécuté avec succès !")
-                st.dataframe(summary_df)
-                afficher_boxplots(df, num_vars, cat_vars)
-            except Exception as e:
-                st.error(f"Erreur Mann-Whitney : {e}")
+    lancer = st.button("🚀 Exécuter ce test")
 
-    # --- Khi² ---
-    st.divider()
-    st.header("📊 Tests de dépendance")
-    st.subheader("Chi²")
-    if st.button("Lancer Chi²"):
-        with st.spinner("Exécution du test du Chi²..."):
-            try:
-                summary_df, all_results = propose_tests_interactif_auto_chi2(
-                    types_df, distribution_df, df, mots_cles
-                )
-                st.success("✅ Test du Chi² exécuté avec succès !")
-                st.dataframe(summary_df)
-            except Exception as e:
-                st.error(f"Erreur Chi² : {e}")
+    if lancer:
+        with st.spinner("Analyse en cours... ⏳"):
+            summary_df, all_results = test_options[choix_test](types_df, distribution_df, df, mots_cles, apparie)
 
-    # --- Corrélations ---
-    st.divider()
-    st.header("🔗 Tests de corrélation")
-    if st.button("Lancer les corrélations"):
-        with st.spinner("Exécution des tests de corrélation..."):
-            try:
-                summary_df, all_results = propose_tests_interactif_auto_correlation(
-                    types_df, distribution_df, df, mots_cles
-                )
-                st.success("✅ Corrélations calculées avec succès !")
-                st.dataframe(summary_df)
+        st.success(f"✅ Test {choix_test} exécuté avec succès !")
+        st.markdown("### 📊 Résultats du test")
+        st.dataframe(summary_df)
 
-                # Heatmap de corrélation
-                st.markdown("#### 🔥 Heatmap des corrélations")
-                corr = df[num_vars].corr()
-                fig, ax = plt.subplots()
-                sns.heatmap(corr, annot=True, cmap="coolwarm", ax=ax)
-                st.pyplot(fig)
-                plt.close(fig)
-            except Exception as e:
-                st.error(f"Erreur corrélation : {e}")
+        # 📥 Option de téléchargement
+        csv = summary_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Télécharger les résultats (CSV)",
+            data=csv,
+            file_name=f"resultats_{choix_test}.csv",
+            mime="text/csv"
+        )
