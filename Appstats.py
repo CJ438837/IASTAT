@@ -34,9 +34,12 @@ elif page == "Descriptive":
 elif page == "Distribution":
     from Pages import page_distribution
     page_distribution.app()
-elif page == "Tests":
-    from Pages import page_tests
-    page_tests.app()
+elif page == "Tests bivariés":
+    from Pages import page_testsbivaries
+    page_testsbivaries.app()
+elif page == "Tests multivariés":
+    from Pages import page_testsmulti
+    page_testsmulti.app()
 
 
 
