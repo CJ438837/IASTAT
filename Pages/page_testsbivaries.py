@@ -1,146 +1,149 @@
-import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import itertools
 import seaborn as sns
-from modules.IA_STAT_interactif_auto import propose_tests_interactif_auto
+import matplotlib.pyplot as plt
+from scipy import stats
 import numpy as np
 
-def app():
-    st.title("📊 Tests statistiques automatiques")
+def propose_tests_bivariés(df, types_df, distribution_df, mots_cles=None, apparie_dict=None):
+    """
+    Exécution automatique des tests bivariés pour Streamlit.
+    
+    Arguments :
+        df : DataFrame principal
+        types_df : DataFrame avec colonnes 'variable' et 'type' ('numérique', 'catégorielle', 'binaire')
+        distribution_df : DataFrame avec colonnes 'variable' et 'verdict' (Normal / Non normal)
+        mots_cles : liste de mots-clés (optionnel, pour PubMed ou rapport)
+        apparie_dict : dictionnaire optionnel {'var_num_vs_var_cat': True/False} pour tests appariés
+    Retour :
+        results_list : liste de DataFrames, un par test exécuté
+    """
 
-    # --- 1️⃣ Vérifications préalables ---
-    if "df_selected" not in st.session_state:
-        st.warning("Veuillez d'abord importer un fichier dans la page Fichier.")
-        st.stop()
-    if "types_df" not in st.session_state:
-        st.warning("Veuillez d'abord détecter les types de variables dans la page Variables.")
-        st.stop()
-    if "distribution_df" not in st.session_state:
-        st.warning("Veuillez d'abord analyser la distribution des données dans la page Distribution.")
-        st.stop()
-
-    # --- 2️⃣ Récupération des données depuis la session ---
-    df = st.session_state["df_selected"].copy()
-    types_df = st.session_state["types_df"].copy()
-    distribution_df = st.session_state["distribution_df"].copy()
-    mots_cles = st.session_state.get("keywords", [])
-
-    st.markdown("### ⚙️ Sélection et exécution des tests")
-
-    # Liste des tests disponibles
-    tests_disponibles = [
-        "t-test / Mann-Whitney",
-        "ANOVA / Kruskal-Wallis",
-        "Corrélation (Pearson / Spearman)",
-        "Chi² / Fisher",
-    ]
-
-    for test in tests_disponibles:
-        with st.expander(f"🧪 {test}"):
-            apparie = st.radio(
-                f"Les groupes sont-ils appariés pour {test} ?",
-                ("Non", "Oui"),
-                key=f"apparie_{test}"
-            ) == "Oui"
-
-            if st.button(f"▶️ Lancer {test}", key=f"lancer_{test}"):
-                with st.spinner(f"Exécution de {test} en cours... ⏳"):
-                    try:
-                        # Exécution du test unique
-                        summary_df, all_results = propose_tests_interactif_auto(
-                            types_df, distribution_df, df, mots_cles, apparie=apparie, test_selectionne=test
-                        )
-
-                        st.success(f"✅ Test {test} exécuté avec succès !")
-
-                        # --- Résumé ---
-                        st.markdown(f"### 📄 Résumé des résultats - {test}")
-                        st.dataframe(summary_df)
-
-                        # --- Graphiques associés ---
-                        num_vars = types_df[types_df['type'] == "numérique"]['variable'].tolist()
-                        cat_vars = types_df[types_df['type'].isin(['catégorielle', 'binaire'])]['variable'].tolist()
-
-                        if test in ["t-test / Mann-Whitney", "ANOVA / Kruskal-Wallis"]:
-                            st.markdown("#### 📊 Boxplots des groupes")
-                            for num in num_vars:
-                                for cat in cat_vars:
-                                    if df[cat].nunique() > 1:
-                                        fig, ax = plt.subplots()
-                                        sns.boxplot(x=cat, y=num, data=df, ax=ax)
-                                        ax.set_title(f"{num} vs {cat}")
-                                        st.pyplot(fig)
-                                        plt.close(fig)
-
-                        elif test == "Corrélation (Pearson / Spearman)":
-                            st.markdown("#### 🔗 Matrice de corrélation")
-                            corr = df[num_vars].corr(method="pearson")
-                            fig, ax = plt.subplots()
-                            sns.heatmap(corr, annot=True, fmt=".2f", cmap="coolwarm", ax=ax)
-                            ax.set_title("Matrice de corrélation (Pearson)")
-                            st.pyplot(fig)
-                            plt.close(fig)
-
-                        elif test == "Chi² / Fisher":
-                            st.markdown("#### 📊 Tableau de contingence (exemple)")
-                            if len(cat_vars) >= 2:
-                                contingency = pd.crosstab(df[cat_vars[0]], df[cat_vars[1]])
-                                st.dataframe(contingency)
-
-                    except Exception as e:
-                        st.error(f"❌ Erreur pendant l'exécution de {test} : {e}")
-
-    # --- PCA et MCA en bas de page ---
-    st.markdown("---")
-    st.markdown("## 🔬 Analyses multivariées")
+    # Normalisation des colonnes de types_df
+    rename_dict = {col: col.lower() for col in types_df.columns}
+    types_df = types_df.rename(columns=rename_dict)
+    types_df.rename(columns={"var": "variable", "variable_name": "variable",
+                             "nom": "variable", "column": "variable",
+                             "var_type": "type", "type_var": "type",
+                             "variable_type": "type", "kind": "type"}, inplace=True)
 
     num_vars = types_df[types_df['type'] == "numérique"]['variable'].tolist()
     cat_vars = types_df[types_df['type'].isin(['catégorielle', 'binaire'])]['variable'].tolist()
 
-    if len(num_vars) > 1:
-        from sklearn.preprocessing import StandardScaler
-        from sklearn.decomposition import PCA
+    results_list = []
 
-        st.markdown("### 📈 PCA")
-        X_scaled = StandardScaler().fit_transform(df[num_vars].dropna())
-        pca = PCA()
-        components = pca.fit_transform(X_scaled)
-        explained_var = pca.explained_variance_ratio_.cumsum()
+    # -------------------------------
+    # Numérique vs Catégorielle
+    # -------------------------------
+    for num, cat in itertools.product(num_vars, cat_vars):
+        n_modalites = df[cat].dropna().nunique()
+        verdict = distribution_df.loc[distribution_df['variable'] == num, 'verdict'].values[0]
 
-        fig, ax = plt.subplots()
-        ax.scatter(components[:, 0], components[:, 1], alpha=0.6)
-        ax.set_xlabel("PC1")
-        ax.set_ylabel("PC2")
-        ax.set_title("Projection individus PC1 vs PC2")
-        st.pyplot(fig)
-        plt.close(fig)
+        if n_modalites == 2:
+            test_name = "t-test" if verdict=="Normal" else "Mann-Whitney"
+        elif n_modalites > 2:
+            test_name = "ANOVA" if verdict=="Normal" else "Kruskal-Wallis"
+        else:
+            test_name = "unknown"
 
-    if len(cat_vars) > 1:
+        groupes = df.groupby(cat)[num].apply(list)
+        stat, p = None, None
+
+        # Déterminer apparié/non apparié pour ce test
+        key = f"{num}_vs_{cat}"
+        apparie = apparie_dict.get(key, False) if apparie_dict else False
+
         try:
-            import prince
-            st.markdown("### 📊 MCA")
-            df_cat = df[cat_vars].dropna()
-            mca = prince.MCA(n_components=2, random_state=42).fit(df_cat)
-            coords = mca.column_coordinates(df_cat)
+            if test_name == "t-test":
+                stat, p = stats.ttest_rel(groupes.iloc[0], groupes.iloc[1]) if apparie else stats.ttest_ind(groupes.iloc[0], groupes.iloc[1])
+            elif test_name == "Mann-Whitney":
+                stat, p = stats.wilcoxon(groupes.iloc[0], groupes.iloc[1]) if apparie else stats.mannwhitneyu(groupes.iloc[0], groupes.iloc[1])
+            elif test_name == "ANOVA":
+                stat, p = stats.f_oneway(*groupes)
+            elif test_name == "Kruskal-Wallis":
+                stat, p = stats.kruskal(*groupes)
 
+            # Graphique
             fig, ax = plt.subplots()
-            ind_coords = mca.row_coordinates(df_cat)
-            ax.scatter(ind_coords[0], ind_coords[1], alpha=0.6)
-            ax.set_xlabel("Dim 1")
-            ax.set_ylabel("Dim 2")
-            ax.set_title("Projection individus (MCA)")
-            st.pyplot(fig)
+            sns.boxplot(x=cat, y=num, data=df, ax=ax)
+            ax.set_title(f"{test_name} : {num} vs {cat}")
+            plt.close(fig)  # fermeture pour Streamlit
+
+        except Exception as e:
+            print(f"Erreur t-test / Mann-Whitney / ANOVA / Kruskal {num} vs {cat} : {e}")
+
+        # Tableau résultat par test
+        result_df = pd.DataFrame([{
+            "Variable_num": num,
+            "Variable_cat": cat,
+            "Test": test_name,
+            "Apparié": apparie,
+            "Statistique": stat,
+            "p-value": p
+        }])
+        results_list.append({"result_df": result_df, "fig": fig})
+
+    # -------------------------------
+    # Numérique vs Numérique
+    # -------------------------------
+    for var1, var2 in itertools.combinations(num_vars, 2):
+        verdict1 = distribution_df.loc[distribution_df['variable']==var1, 'verdict'].values[0]
+        verdict2 = distribution_df.loc[distribution_df['variable']==var2, 'verdict'].values[0]
+        test_type = "Pearson" if verdict1=="Normal" and verdict2=="Normal" else "Spearman"
+
+        try:
+            if test_type=="Pearson":
+                stat, p = stats.pearsonr(df[var1].dropna(), df[var2].dropna())
+            else:
+                stat, p = stats.spearmanr(df[var1].dropna(), df[var2].dropna())
+
+            # Graphique
+            fig, ax = plt.subplots()
+            sns.scatterplot(x=var1, y=var2, data=df, ax=ax)
+            ax.set_title(f"{test_type} corrélation : {var1} vs {var2}")
             plt.close(fig)
 
+        except Exception as e:
+            print(f"Erreur corrélation {var1} vs {var2} : {e}")
+
+        result_df = pd.DataFrame([{
+            "Variable_num1": var1,
+            "Variable_num2": var2,
+            "Test": f"Corrélation ({test_type})",
+            "Statistique": stat,
+            "p-value": p
+        }])
+        results_list.append({"result_df": result_df, "fig": fig})
+
+    # -------------------------------
+    # Catégorielle vs Catégorielle
+    # -------------------------------
+    for var1, var2 in itertools.combinations(cat_vars, 2):
+        contingency_table = pd.crosstab(df[var1], df[var2])
+        try:
+            if contingency_table.size <= 4:
+                stat, p = stats.fisher_exact(contingency_table)
+                test_name = "Fisher exact"
+            else:
+                stat, p, dof, expected = stats.chi2_contingency(contingency_table)
+                test_name = "Chi²"
+
+            # Graphique
             fig, ax = plt.subplots()
-            ax.scatter(coords[0], coords[1], color='red', alpha=0.7)
-            for i, label in enumerate(coords.index):
-                ax.text(coords.iloc[i, 0], coords.iloc[i, 1], label, fontsize=9, color='darkred')
-            ax.set_xlabel("Dim 1")
-            ax.set_ylabel("Dim 2")
-            ax.set_title("Projection catégories (MCA)")
-            st.pyplot(fig)
+            sns.heatmap(contingency_table, annot=True, fmt="d", cmap="coolwarm", ax=ax)
+            ax.set_title(f"{test_name} : {var1} vs {var2}")
             plt.close(fig)
 
-        except ImportError:
-            st.warning("Module 'prince' non installé. Pour MCA, exécutez : pip install prince")
+        except Exception as e:
+            print(f"Erreur Chi² / Fisher {var1} vs {var2} : {e}")
+
+        result_df = pd.DataFrame([{
+            "Variable_cat1": var1,
+            "Variable_cat2": var2,
+            "Test": test_name,
+            "Statistique": stat,
+            "p-value": p
+        }])
+        results_list.append({"result_df": result_df, "fig": fig})
+
+    return results_list
