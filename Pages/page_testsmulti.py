@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from modules.IA_STAT_testsmultivaries import propose_tests_multivariés
+from modules.IA_STAT_testmultivaries import propose_tests_multivariés
 
 def app():
     st.title("📊 Tests statistiques multivariés")
