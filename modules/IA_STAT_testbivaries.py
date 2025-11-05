@@ -80,16 +80,16 @@ def _kendall_tau(x, y):
 
 
 def _normality_test(series):
-    arr = np.asarray(series.dropna())
-    if len(arr) < 3:
-        return {"test": "shapiro", "stat": np.nan, "p": np.nan, "normal": False}
-    # For large n (>=5000) Shapiro may be inappropriate; still use if small.
     try:
+        arr = np.asarray(series.dropna())
+        if len(arr) < 3:
+            return {"test": "Shapiro", "stat": np.nan, "p": np.nan, "normal": False}
         stat, p = shapiro(arr)
+        normal = p > 0.05
+        return {"test": "Shapiro-Wilk", "stat": float(stat), "p": float(p), "normal": normal}
     except Exception:
-        stat, p = np.nan, np.nan
-    return {"test": "Shapiro-Wilk", "stat": float(stat) if not np.isnan(stat) else np.nan,
-            "p": float(p) if not np.isnan(p) else np.nan, "normal": (p is not None and p > 0.05)}
+        return {"test": "Shapiro-Wilk", "stat": np.nan, "p": np.nan, "normal": False}
+
 
 
 def _levene_test(*groups):
