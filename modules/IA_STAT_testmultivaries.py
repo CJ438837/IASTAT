@@ -10,16 +10,21 @@ import statsmodels.api as sm
 plt.style.use('seaborn-v0_8-muted')
 
 def propose_tests_multivariés(df, types_df, distribution_df=None,
-                              target_var=None, predictor_vars=None):
+                              target_var=None, predictor_vars=None,
+                              mots_cles=None):
     """
     Exécute des tests multivariés :
     - Régression linéaire multiple pour target numérique
     - Régression logistique pour target binaire
     - PCA sur variables numériques
     - MCA sur variables catégorielles/binaire
-    """
 
+    mots_cles : argument optionnel ignoré pour compatibilité avec l'appel depuis Streamlit
+    """
     results = []
+
+    # --- le reste du code inchangé ---
+
 
     # --- Détection des types ---
     types_df = types_df.rename(columns=lambda x: x.lower())
