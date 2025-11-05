@@ -9,3 +9,4 @@ prince
 openpyxl
 fitter 
 setuptools
+statsmodels
