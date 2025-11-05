@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from modules.IA_STAT_testsmulti import propose_tests_multivariés
+from modules.IA_STAT_testmulti import propose_tests_multivariés
 
 plt.style.use('seaborn-v0_8-muted')
 
