@@ -1,59 +1,93 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-from modules.IA_STAT_testbivaries import propose_tests_bivariés
+from modules.IA_STAT_testbivaries import propose_tests_bivaries
 
 def app():
-    st.title("📊 Tests bivariés automatiques")
+    st.title("🔍 Analyse Bivariée - Tests statistiques")
 
-    # --- Vérifications préalables ---
-    if "df_selected" not in st.session_state:
-        st.warning("Veuillez d'abord importer un fichier dans la page Fichier.")
-        st.stop()
-    if "types_df" not in st.session_state:
-        st.warning("Veuillez d'abord détecter les types de variables dans la page Variables.")
-        st.stop()
-    if "distribution_df" not in st.session_state:
-        st.warning("Veuillez d'abord analyser la distribution des données dans la page Distribution.")
-        st.stop()
+    st.markdown("""
+    Cette section permet d'explorer les relations entre deux variables à l'aide de tests bivariés adaptés :
+    - **Comparaison de moyennes** (t-test, Mann-Whitney, ANOVA)
+    - **Corrélations** (Pearson, Spearman, Kendall)
+    - **Tests de dépendance** (Chi², Fisher)
+    """)
 
-    df = st.session_state["df_selected"].copy()
-    types_df = st.session_state["types_df"].copy()
-    distribution_df = st.session_state["distribution_df"].copy()
-    mots_cles = st.session_state.get("keywords", [])
+    st.divider()
 
-    # --- Bouton pour lancer les tests ---
-    if "test_index" not in st.session_state:
-        st.session_state["test_index"] = 0
-    if "test_results" not in st.session_state:
-        st.session_state["test_results"] = []
+    # === Chargement du dataset ===
+    st.header("📂 Chargement des données")
+    uploaded_file = st.file_uploader("Chargez votre fichier CSV :", type=["csv"])
 
-    if st.button("🧠 Exécuter les tests bivariés"):
-        st.session_state["test_results"] = propose_tests_bivariés(df, types_df, distribution_df, mots_cles)
-        st.session_state["test_index"] = 0
-        st.success(f"✅ {len(st.session_state['test_results'])} tests générés !")
+    if uploaded_file is not None:
+        df = pd.read_csv(uploaded_file)
+        st.success(f"✅ Données chargées ({df.shape[0]} lignes, {df.shape[1]} colonnes)")
+        st.dataframe(df.head())
 
-    # --- Navigation des tests ---
-    if st.session_state["test_results"]:
-        test_index = st.session_state["test_index"]
-        test_data = st.session_state["test_results"][test_index]
+        # === Détection automatique des types de variables ===
+        types_df = pd.DataFrame({
+            "variable": df.columns,
+            "type": [
+                "numérique" if pd.api.types.is_numeric_dtype(df[col]) else "catégorielle"
+                for col in df.columns
+            ]
+        })
+        st.write("### 📊 Types de variables détectés automatiquement")
+        st.dataframe(types_df)
 
-        # Affichage tableau
-        st.markdown("### 📄 Résultat du test")
-        st.dataframe(test_data["result_df"])
+        st.divider()
 
-        # Affichage graphique
-        st.markdown("### 📊 Graphique associé")
-        st.pyplot(test_data["fig"])
+        # === Sélection des variables ===
+        st.header("🎯 Sélection des variables à comparer")
 
-        # Navigation test suivant / précédent
-        col1, col2, col3 = st.columns([1,2,1])
-        with col1:
-            if st.button("⬅️ Test précédent") and test_index > 0:
-                st.session_state["test_index"] -= 1
-        with col3:
-            if st.button("Test suivant ➡️") and test_index < len(st.session_state["test_results"]) - 1:
-                st.session_state["test_index"] += 1
+        var1 = st.selectbox("Variable 1 :", df.columns)
+        var2 = st.selectbox("Variable 2 :", df.columns, index=min(1, len(df.columns) - 1))
 
-        # Information de navigation
-        st.markdown(f"**Test {test_index+1} / {len(st.session_state['test_results'])}**")
+        if var1 == var2:
+            st.warning("⚠️ Veuillez sélectionner deux variables différentes.")
+            return
+
+        # === Sélection du test ===
+        st.header("⚖️ Choix du test statistique")
+
+        test_options = [
+            "t-test / Mann-Whitney",
+            "ANOVA / Kruskal-Wallis",
+            "Chi² / Fisher",
+            "Corrélation (Pearson/Spearman/Kendall)",
+        ]
+        test_selectionne = st.selectbox("Choisissez un test :", test_options)
+
+        # === Options supplémentaires ===
+        apparie = st.checkbox("Données appariées ?", value=False)
+        alpha = st.slider("Niveau de signification α :", 0.01, 0.10, 0.05, step=0.01)
+
+        st.divider()
+
+        # === Exécution du test ===
+        if st.button("🚀 Lancer le test"):
+            with st.spinner("Analyse en cours..."):
+                try:
+                    resultats_df, graph = propose_tests_bivaries(
+                        df=df,
+                        var1=var1,
+                        var2=var2,
+                        test_selectionne=test_selectionne,
+                        apparie=apparie,
+                        alpha=alpha
+                    )
+
+                    st.success("✅ Test effectué avec succès")
+
+                    # Affichage des résultats
+                    st.subheader("📋 Résultats du test")
+                    st.dataframe(resultats_df)
+
+                    if graph is not None:
+                        st.subheader("📈 Visualisation")
+                        st.pyplot(graph)
+
+                except Exception as e:
+                    st.error(f"❌ Erreur pendant l’exécution : {e}")
+
+    else:
+        st.info("💡 Importez un fichier CSV pour commencer l'analyse.")
