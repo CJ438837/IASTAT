@@ -85,10 +85,10 @@ def _normality_test(series):
         if len(arr) < 3:
             return {"test": "Shapiro", "stat": np.nan, "p": np.nan, "normal": False}
         stat, p = shapiro(arr)
-        normal = p > 0.05
-        return {"test": "Shapiro-Wilk", "stat": float(stat), "p": float(p), "normal": normal}
+        return {"test": "Shapiro-Wilk", "stat": float(stat), "p": float(p), "normal": p > 0.05}
     except Exception:
         return {"test": "Shapiro-Wilk", "stat": np.nan, "p": np.nan, "normal": False}
+
 
 
 
