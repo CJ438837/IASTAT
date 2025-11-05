@@ -10,4 +10,4 @@ openpyxl
 fitter 
 setuptools
 statsmodels
-os
+
