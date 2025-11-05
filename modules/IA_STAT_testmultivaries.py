@@ -10,108 +10,97 @@ import statsmodels.api as sm
 plt.style.use("seaborn-v0_8-muted")
 
 
-def propose_tests_multivariés(df, types_df, distribution_df=None, mots_cles=None):
+def propose_tests_multivariés(df, types_df, distribution_df, mots_cles=None,
+                              target_var=None, predictor_vars=None):
     """
-    Exécute une série de tests multivariés et retourne une liste de résultats.
-    Chaque résultat : {"test": ..., "result_df": ..., "fig": ...}
+    Exécute automatiquement une série de tests multivariés pour une variable cible et ses prédicteurs :
+    - Régression linéaire multiple si target_var numérique
+    - Régression logistique si target_var binaire
+    - ACP (PCA) sur variables numériques
+    - ACM (MCA) sur variables catégorielles
     """
+
     results = []
 
-    # Colonnes par type
-    num_vars = types_df[types_df["type"] == "numérique"]["variable"].tolist()
-    bin_vars = types_df[types_df["type"] == "binaire"]["variable"].tolist()
-    cat_vars = types_df[types_df["type"] == "catégorielle"]["variable"].tolist()
+    if target_var is None or predictor_vars is None or len(predictor_vars) == 0:
+        raise ValueError("Veuillez fournir target_var et au moins un predictor_var")
 
-    # --- 1️⃣ Régression linéaire multiple ---
-    if len(num_vars) >= 2:
-        for target in num_vars:
-            predictors = [v for v in num_vars if v != target]
-            data = df[predictors + [target]].dropna()
-            if len(data) > 5:
-                X = sm.add_constant(data[predictors])
-                y = data[target]
-                model = sm.OLS(y, X).fit()
+    # Récupérer types des variables
+    type_dict = types_df.set_index("variable")["type"].to_dict()
+    target_type = type_dict.get(target_var, "numérique")
 
-                result_df = pd.DataFrame({
-                    "Variable": model.params.index,
-                    "Coefficient": model.params.values,
-                    "p-value": model.pvalues.values,
-                    "R² ajusté": [model.rsquared_adj] + [None]*(len(model.params)-1)
-                })
+    # Sélection des prédicteurs
+    predictor_types = [type_dict.get(p, "numérique") for p in predictor_vars]
 
-                fig, ax = plt.subplots(figsize=(6,4))
-                ax.scatter(model.fittedvalues, y, alpha=0.7)
-                ax.plot(y, y, color="red", linestyle="--")
-                ax.set_xlabel("Valeurs prédites")
-                ax.set_ylabel("Valeurs réelles")
-                ax.set_title(f"Régression linéaire multiple ({target})")
+    # --- Régression linéaire ---
+    if target_type == "numérique":
+        X = df[predictor_vars].dropna()
+        y = df[target_var].dropna()
+        # garder seulement les lignes présentes dans X et y
+        common_index = X.index.intersection(y.index)
+        X = X.loc[common_index]
+        y = y.loc[common_index]
+        if len(X) > 5:
+            import statsmodels.api as sm
+            Xc = sm.add_constant(X)
+            model = sm.OLS(y, Xc).fit()
+            result_df = pd.DataFrame({
+                "Variable": model.params.index,
+                "Coefficient": model.params.values,
+                "p-value": model.pvalues.values,
+                "R² ajusté": [model.rsquared_adj] + [None]*(len(model.params)-1)
+            })
 
-                results.append({
-                    "test": f"Régression linéaire multiple ({target})",
-                    "result_df": result_df,
-                    "fig": fig
-                })
+            # Graphique
+            fig, ax = plt.subplots(figsize=(6,4))
+            ax.scatter(model.fittedvalues, y, alpha=0.7)
+            ax.plot(y, y, color="red", linestyle="--")
+            ax.set_xlabel("Valeurs prédites")
+            ax.set_ylabel("Valeurs réelles")
+            ax.set_title(f"Régression linéaire multiple ({target_var})")
 
-    # --- 2️⃣ Régression logistique ---
-    if len(bin_vars) > 0 and len(num_vars) > 0:
-        for target in bin_vars:
-            predictors = num_vars.copy()
-            data = df[predictors + [target]].dropna()
-            if len(data) > 10 and data[target].nunique() == 2:
-                X = sm.add_constant(data[predictors])
-                y = data[target].astype("category").cat.codes
-                model = sm.Logit(y, X).fit(disp=False)
+            results.append({"test": f"Régression linéaire multiple ({target_var})",
+                            "result_df": result_df, "fig": fig})
 
-                result_df = pd.DataFrame({
-                    "Variable": model.params.index,
-                    "Coefficient": model.params.values,
-                    "p-value": model.pvalues.values,
-                    "Pseudo R²": [model.prsquared] + [None]*(len(model.params)-1)
-                })
+    # --- Régression logistique ---
+    elif target_type == "binaire":
+        X = df[predictor_vars].dropna()
+        y = df[target_var].dropna()
+        common_index = X.index.intersection(y.index)
+        X = X.loc[common_index]
+        y = y.loc[common_index]
+        if len(X) > 5:
+            import statsmodels.api as sm
+            Xc = sm.add_constant(X)
+            y_bin = y.astype("category").cat.codes
+            model = sm.Logit(y_bin, Xc).fit(disp=False)
+            result_df = pd.DataFrame({
+                "Variable": model.params.index,
+                "Coefficient": model.params.values,
+                "p-value": model.pvalues.values
+            })
+            result_df["Pseudo R²"] = model.prsquared
 
-                fig, ax = plt.subplots(figsize=(6,4))
-                sns.histplot(model.predict(X), kde=True, ax=ax)
-                ax.set_title(f"Régression logistique ({target})")
-                ax.set_xlabel("Probabilité prédite")
+            # Graphique
+            fig, ax = plt.subplots(figsize=(6,4))
+            sns.histplot(model.predict(Xc), kde=True, ax=ax)
+            ax.set_title(f"Régression logistique ({target_var})")
+            ax.set_xlabel("Probabilité prédite")
 
-                results.append({
-                    "test": f"Régression logistique ({target})",
-                    "result_df": result_df,
-                    "fig": fig
-                })
+            results.append({"test": f"Régression logistique ({target_var})",
+                            "result_df": result_df, "fig": fig})
 
-    # --- 3️⃣ Régression multinomiale ---
-    for target in cat_vars:
-        predictors = num_vars.copy()
-        data = df[predictors + [target]].dropna()
-        if len(data[target].unique()) > 2 and len(data) > 10:
-            try:
-                X = sm.add_constant(data[predictors])
-                y = data[target].astype("category")
-                model = sm.MNLogit(y.cat.codes, X).fit(disp=False)
-
-                result_df = model.params.reset_index()
-                fig, ax = plt.subplots(figsize=(6,4))
-                ax.axis("off")
-                ax.set_title(f"Régression multinomiale ({target})")
-
-                results.append({
-                    "test": f"Régression multinomiale ({target})",
-                    "result_df": result_df,
-                    "fig": fig
-                })
-            except Exception as e:
-                print(f"Erreur régression multinomiale {target}: {e}")
-
-    # --- 4️⃣ PCA ---
+    # --- PCA sur variables numériques si plus d'une ---
+    num_vars = [v for v, t in type_dict.items() if t=="numérique"]
     if len(num_vars) > 1:
         try:
-            data = df[num_vars].dropna()
-            X_scaled = StandardScaler().fit_transform(data)
+            from sklearn.preprocessing import StandardScaler
+            from sklearn.decomposition import PCA
+            X_num = df[num_vars].dropna()
+            X_scaled = StandardScaler().fit_transform(X_num)
             pca = PCA()
             components = pca.fit_transform(X_scaled)
             explained_var = pca.explained_variance_ratio_.cumsum()
-
             result_df = pd.DataFrame({
                 "Composante": [f"PC{i+1}" for i in range(len(explained_var))],
                 "Variance cumulée": explained_var
@@ -123,24 +112,21 @@ def propose_tests_multivariés(df, types_df, distribution_df=None, mots_cles=Non
             ax.set_xlabel("Composantes principales")
             ax.set_ylabel("Variance expliquée cumulée")
 
-            results.append({
-                "test": "Analyse en composantes principales (PCA)",
-                "result_df": result_df,
-                "fig": fig
-            })
+            results.append({"test": "Analyse en composantes principales (PCA)",
+                            "result_df": result_df, "fig": fig})
         except Exception as e:
-            print(f"Erreur PCA: {e}")
+            print(f"Erreur PCA : {e}")
 
-    # --- 5️⃣ MCA ---
-    cat_all = cat_vars + bin_vars
-    if len(cat_all) > 1:
+    # --- MCA sur variables catégorielles si plus d'une ---
+    cat_vars = [v for v, t in type_dict.items() if t in ["catégorielle","binaire"]]
+    if len(cat_vars) > 1:
         try:
             import prince
-            df_cat = df[cat_all].dropna()
+            df_cat = df[cat_vars].dropna()
             mca = prince.MCA(n_components=2, random_state=42).fit(df_cat)
             coords = mca.column_coordinates(df_cat)
-
             result_df = coords.reset_index().rename(columns={"index": "Catégorie"})
+
             fig, ax = plt.subplots(figsize=(6,4))
             ax.scatter(coords[0], coords[1], alpha=0.7)
             for i, label in enumerate(coords.index):
@@ -149,14 +135,10 @@ def propose_tests_multivariés(df, types_df, distribution_df=None, mots_cles=Non
             ax.set_xlabel("Dimension 1")
             ax.set_ylabel("Dimension 2")
 
-            results.append({
-                "test": "Analyse des correspondances multiples (MCA)",
-                "result_df": result_df,
-                "fig": fig
-            })
-        except ImportError:
-            print("Module prince non installé pour MCA.")
+            results.append({"test": "Analyse des correspondances multiples (MCA)",
+                            "result_df": result_df, "fig": fig})
         except Exception as e:
-            print(f"Erreur MCA: {e}")
+            print(f"Erreur MCA : {e}")
 
     return results
+
