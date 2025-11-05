@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from modules.IA_STAT_testmultivaries import propose_tests_multivariés
+from modules.IA_STAT_testsmultivaries import propose_test_multivariés
 
 plt.style.use('seaborn-v0_8-muted')
 
@@ -27,32 +27,29 @@ def app():
     distribution_df = st.session_state["distribution_df"].copy()
     mots_cles = st.session_state.get("keywords", [])
 
-    # --- 3️⃣ Sélection des options utilisateur ---
-    st.markdown("### 🎯 Sélection du test multivarié à réaliser")
+    # --- 3️⃣ Sélection des variables ---
+    st.markdown("### 🎯 Choix des variables")
+    target = st.selectbox("Variable à expliquer :", df.columns)
+    possible_predictors = [col for col in df.columns if col != target]
+    predictors = st.multiselect("Variables explicatives :", possible_predictors, default=possible_predictors)
 
-    test_options = [
-        "Régression linéaire multiple",
-        "Régression logistique",
-        "ACP (PCA)",
-        "ACM (MCA)"
-    ]
-    test_selected = st.selectbox("Choisissez le test :", test_options)
+    if not predictors:
+        st.warning("⚠️ Sélectionnez au moins une variable explicative.")
+        st.stop()
 
-    lancer_tests = st.button("🧠 Exécuter le test")
+    lancer_test = st.button("🧠 Exécuter le test")
 
-    if lancer_tests:
+    if lancer_test:
         with st.spinner("Exécution du test en cours... ⏳"):
             try:
-                results = propose_tests_multivariés(df, types_df, distribution_df, mots_cles=mots_cles)
+                results = propose_tests_multivariés(df, types_df, distribution_df, mots_cles=mots_cles,
+                                                    target_var=target, predictor_vars=predictors)
 
-                # --- 4️⃣ Filtrer pour le test choisi ---
-                filtered_results = [r for r in results if r["test"].startswith(test_selected)]
-
-                if not filtered_results:
-                    st.warning("⚠️ Aucun résultat pour ce test avec les données sélectionnées.")
+                if not results:
+                    st.warning("⚠️ Aucun résultat pour la sélection de variables actuelle.")
                     st.stop()
 
-                for res in filtered_results:
+                for res in results:
                     st.markdown(f"### 📄 {res['test']}")
                     if "result_df" in res and res["result_df"] is not None:
                         st.dataframe(res["result_df"])
