@@ -3,14 +3,14 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from modules.IA_STAT_testmultivaries import propose_tests_multivariés
+from modules.IA_STAT_testsmulti import propose_tests_multivariés
 
-plt.style.use('seaborn-muted')
+plt.style.use('seaborn-v0_8-muted')
 
 def app():
     st.title("📊 Tests statistiques multivariés")
 
-    # --- Vérifications préalables ---
+    # --- 1️⃣ Vérifications préalables ---
     if "df_selected" not in st.session_state:
         st.warning("Veuillez d'abord importer un fichier dans la page Fichier.")
         st.stop()
@@ -21,42 +21,46 @@ def app():
         st.warning("Veuillez d'abord analyser la distribution des données dans la page Distribution.")
         st.stop()
 
-    # --- Récupération des données depuis la session ---
+    # --- 2️⃣ Récupération des données depuis la session ---
     df = st.session_state["df_selected"].copy()
     types_df = st.session_state["types_df"].copy()
     distribution_df = st.session_state["distribution_df"].copy()
     mots_cles = st.session_state.get("keywords", [])
 
-    st.markdown("### 🎯 Sélection des variables")
-    var_dep = st.selectbox("Variable à expliquer (dépendante) :", df.columns)
-    var_ind = st.multiselect(
-        "Variables explicatives :", [v for v in df.columns if v != var_dep]
-    )
+    # --- 3️⃣ Sélection des options utilisateur ---
+    st.markdown("### 🎯 Sélection du test multivarié à réaliser")
 
-    if not var_ind:
-        st.warning("⚠️ Veuillez sélectionner au moins une variable explicative.")
-        st.stop()
+    test_options = [
+        "Régression linéaire multiple",
+        "Régression logistique",
+        "ACP (PCA)",
+        "ACM (MCA)"
+    ]
+    test_selected = st.selectbox("Choisissez le test :", test_options)
 
-    lancer_tests = st.button("🧠 Exécuter les tests multivariés")
+    lancer_tests = st.button("🧠 Exécuter le test")
 
     if lancer_tests:
-        with st.spinner("Exécution des tests en cours... ⏳"):
+        with st.spinner("Exécution du test en cours... ⏳"):
             try:
-                # Filtrage des colonnes choisies
-                df_sub = df[[var_dep] + var_ind].copy()
-                types_sub = types_df[types_df['variable'].isin([var_dep] + var_ind)].copy()
+                results = propose_tests_multivariés(df, types_df, distribution_df, mots_cles=mots_cles)
 
-                results = propose_tests_multivariés(
-                    df_sub, types_sub, distribution_df, mots_cles
-                )
-                st.success("✅ Tests multivariés exécutés avec succès !")
+                # --- 4️⃣ Filtrer pour le test choisi ---
+                filtered_results = [r for r in results if r["test"].startswith(test_selected)]
 
-                # Affichage des résultats
-                for r in results:
-                    st.markdown(f"### 📄 {r['test']}")
-                    st.dataframe(r['result_df'])
-                    st.pyplot(r['fig'])
-                    plt.close(r['fig'])
+                if not filtered_results:
+                    st.warning("⚠️ Aucun résultat pour ce test avec les données sélectionnées.")
+                    st.stop()
+
+                for res in filtered_results:
+                    st.markdown(f"### 📄 {res['test']}")
+                    if "result_df" in res and res["result_df"] is not None:
+                        st.dataframe(res["result_df"])
+                    if "fig" in res and res["fig"] is not None:
+                        st.pyplot(res["fig"])
+                        plt.close(res["fig"])
+
+                st.success("✅ Test multivarié exécuté avec succès !")
 
             except Exception as e:
-                st.error(f"❌ Une erreur est survenue pendant l'exécution des tests : {e}")
+                st.error(f"❌ Une erreur est survenue pendant l'exécution du test : {e}")
