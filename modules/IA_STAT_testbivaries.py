@@ -17,7 +17,8 @@ try:
 except Exception:
     STATSmodels_AVAILABLE = False
 
-plt.style.use('seaborn-muted')
+plt.style.use('seaborn-v0_8-muted')
+
 
 
 def _ensure_dir(path):
