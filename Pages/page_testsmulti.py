@@ -1,11 +1,13 @@
 # Pages/page_testsmulti.py
 import streamlit as st
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+
 from modules.IA_STAT_testmultivaries import propose_tests_multivariés
 
-plt.style.use('seaborn-v0_8-muted')
+plt.style.use("seaborn-v0_8-muted")  # même style que page bivariées
 
 def app():
     st.title("📊 Tests statistiques multivariés")
@@ -21,43 +23,51 @@ def app():
         st.warning("Veuillez d'abord analyser la distribution des données dans la page Distribution.")
         st.stop()
 
-    # --- 2️⃣ Récupération des données depuis la session ---
+    # --- 2️⃣ Récupération des données ---
     df = st.session_state["df_selected"].copy()
     types_df = st.session_state["types_df"].copy()
     distribution_df = st.session_state["distribution_df"].copy()
-    mots_cles = st.session_state.get("keywords", [])
 
-    # --- 3️⃣ Sélection des variables ---
-    st.markdown("### 🎯 Choix des variables")
-    target = st.selectbox("Variable à expliquer :", df.columns)
-    possible_predictors = [col for col in df.columns if col != target]
-    predictors = st.multiselect("Variables explicatives :", possible_predictors, default=possible_predictors)
+    st.markdown("### 🎯 Sélection de la variable à expliquer et des variables explicatives")
 
-    if not predictors:
-        st.warning("⚠️ Sélectionnez au moins une variable explicative.")
+    # --- Choix de la variable cible ---
+    target_var = st.selectbox(
+        "Variable à expliquer (target) :",
+        options=types_df["variable"].tolist()
+    )
+
+    # --- Choix des variables explicatives ---
+    predictor_vars = st.multiselect(
+        "Variables explicatives (predictors) :",
+        options=[v for v in types_df["variable"].tolist() if v != target_var]
+    )
+
+    if not predictor_vars:
+        st.warning("⚠️ Veuillez sélectionner au moins une variable explicative.")
         st.stop()
 
-    lancer_test = st.button("🧠 Exécuter le test")
+    lancer_tests = st.button("🧠 Exécuter le test multivarié")
 
-    if lancer_test:
+    if lancer_tests:
         with st.spinner("Exécution du test en cours... ⏳"):
             try:
-                results = propose_tests_multivariés(df, types_df, distribution_df, mots_cles=mots_cles,
-                                                    target_var=target, predictor_vars=predictors)
+                results = propose_tests_multivariés(
+                    df=df,
+                    types_df=types_df,
+                    target_var=target_var,
+                    predictor_vars=predictor_vars
+                )
 
-                if not results:
-                    st.warning("⚠️ Aucun résultat pour la sélection de variables actuelle.")
-                    st.stop()
+                st.success("✅ Test(s) exécuté(s) avec succès !")
 
+                # --- Affichage des résultats ---
                 for res in results:
-                    st.markdown(f"### 📄 {res['test']}")
-                    if "result_df" in res and res["result_df"] is not None:
+                    st.markdown(f"### 🧪 {res['test']}")
+                    if "result_df" in res:
                         st.dataframe(res["result_df"])
                     if "fig" in res and res["fig"] is not None:
                         st.pyplot(res["fig"])
                         plt.close(res["fig"])
-
-                st.success("✅ Test multivarié exécuté avec succès !")
 
             except Exception as e:
                 st.error(f"❌ Une erreur est survenue pendant l'exécution du test : {e}")
