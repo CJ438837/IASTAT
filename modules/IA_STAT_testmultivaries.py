@@ -6,6 +6,8 @@ import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 import statsmodels.api as sm
+import os
+
 
 plt.style.use('seaborn-v0_8-muted')
 
