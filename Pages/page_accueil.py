@@ -9,7 +9,7 @@ def app():
     try:
         # Chemin vers ton logo Corvus (à adapter selon ton projet)
         logo = Image.open("assets/logoc.png")  
-        st.image(logo, width=300)
+        st.image(logo, width=600)
     except Exception as e:
         st.warning(f"Logo non trouvé : {e}")
 
@@ -38,5 +38,6 @@ def app():
     # --- 4️⃣ Optionnel : ajout d'un pied de page ---
     st.markdown("---")
     st.markdown("© 2025 Corvus Analytics - Tous droits réservés")
+
 
 
