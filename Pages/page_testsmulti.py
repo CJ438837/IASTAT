@@ -9,11 +9,11 @@ def app():
     st.title("📊 Tests Multivariés Avancés")
 
     # Récupération du fichier chargé dans la page Fichier
-    if "df" not in st.session_state or st.session_state["df"] is None:
+    if "df_selected" not in st.session_state or st.session_state["df_selected"] is None:
         st.warning("⚠️ Veuillez d'abord charger un fichier dans l'onglet **Fichier**.")
         return
 
-    df = st.session_state["df"]
+    df = st.session_state["df_selected"]
 
     # Chargement des types de variables (s’ils sont déjà détectés)
     if "types_df" not in st.session_state or st.session_state["types_df"] is None:
