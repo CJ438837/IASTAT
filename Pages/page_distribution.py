@@ -18,38 +18,51 @@ def app():
 
     st.success("✅ Fichier importé et types de variables détectés.")
 
-    # --- 2️⃣ Tableau récapitulatif des distributions ---
-    st.subheader("Résumé des tests de distribution")
-    output_folder = "distribution_plots"
+    # --- 2️⃣ Sélection de la variable ---
+    st.subheader("Choix de la variable numérique à analyser")
+    numeric_vars = types_df[types_df["type"] == "numérique"]["variable"].tolist()
+    selected_var = st.selectbox("Variable à analyser", options=numeric_vars)
 
-    # Exécution de l'analyse
-    distribution_df = advanced_distribution_analysis(df, types_df, output_folder=output_folder)
-    st.dataframe(distribution_df)
+    if not selected_var:
+        st.warning("Sélectionnez une variable pour continuer.")
+        st.stop()
 
-    # --- 2️⃣b Sauvegarde dans la session ---
-    st.session_state["distribution_df"] = distribution_df
+    # --- 3️⃣ Bouton pour lancer l'analyse ---
+    if st.button("Lancer l'analyse"):
+        output_folder = "distribution_plots"
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
 
-    # --- 3️⃣ Navigation des graphiques ---
-    plot_files = sorted([f for f in os.listdir(output_folder) if f.endswith(".png")])
-    if not plot_files:
-        st.warning("Aucun graphique généré.")
-        return
+        # Exécution de l'analyse pour la variable sélectionnée
+        distribution_df = advanced_distribution_analysis(df[[selected_var]], types_df[types_df["variable"] == selected_var], 
+                                                         output_folder=output_folder)
 
-    if "dist_plot_index" not in st.session_state:
-        st.session_state.dist_plot_index = 0
+        st.subheader("Résumé des tests de distribution")
+        st.dataframe(distribution_df)
 
-    col1, col2, col3 = st.columns([1,2,1])
-    with col1:
-        if st.button("⬅️ Précédent"):
-            if st.session_state.dist_plot_index > 0:
-                st.session_state.dist_plot_index -= 1
-    with col3:
-        if st.button("Suivant ➡️"):
-            if st.session_state.dist_plot_index < len(plot_files) - 1:
-                st.session_state.dist_plot_index += 1
+        # Sauvegarde dans la session
+        st.session_state["distribution_df"] = distribution_df
 
-    # Affichage du graphique courant
-    plot_path = os.path.join(output_folder, plot_files[st.session_state.dist_plot_index])
-    st.image(plot_path, use_column_width=True)
-    st.caption(f"Graphique {st.session_state.dist_plot_index + 1} / {len(plot_files)} : {plot_files[st.session_state.dist_plot_index]}")
+        # --- 4️⃣ Navigation des graphiques ---
+        plot_files = sorted([f for f in os.listdir(output_folder) if f.endswith(".png") and selected_var in f])
+        if not plot_files:
+            st.warning("Aucun graphique généré pour cette variable.")
+            return
 
+        if "dist_plot_index" not in st.session_state:
+            st.session_state.dist_plot_index = 0
+
+        col1, col2, col3 = st.columns([1,2,1])
+        with col1:
+            if st.button("⬅️ Précédent", key="prev_plot"):
+                if st.session_state.dist_plot_index > 0:
+                    st.session_state.dist_plot_index -= 1
+        with col3:
+            if st.button("Suivant ➡️", key="next_plot"):
+                if st.session_state.dist_plot_index < len(plot_files) - 1:
+                    st.session_state.dist_plot_index += 1
+
+        # Affichage du graphique courant
+        plot_path = os.path.join(output_folder, plot_files[st.session_state.dist_plot_index])
+        st.image(plot_path, use_column_width=True)
+        st.caption(f"Graphique {st.session_state.dist_plot_index + 1} / {len(plot_files)} : {plot_files[st.session_state.dist_plot_index]}")
