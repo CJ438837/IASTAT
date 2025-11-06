@@ -5,7 +5,7 @@ from modules.IA_STAT_testmultivaries import propose_tests_multivariés
 
 plt.style.use("seaborn-v0_8-muted")
 
-def page_testsmulti():
+def app():
     st.title("📊 Tests Multivariés Avancés")
 
     # Récupération du fichier chargé dans la page Fichier
