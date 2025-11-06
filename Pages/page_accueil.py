@@ -1,13 +1,40 @@
-import os
-from PIL import Image
 import streamlit as st
+from PIL import Image
 
 def app():
-    st.title("Bienvenue sur IA_STAT")
+    # --- 1️⃣ Page d'accueil ---
+    st.set_page_config(page_title="IA Stat Corvus", layout="wide")
 
-    # chemin absolu du fichier logo
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # dossier de page_accueil.py
-    logo_path = os.path.join(BASE_DIR, "..", "assets", "logoc.png")
-    logo = Image.open(logo_path)
-    st.image(logo, width=200)
+    # --- 2️⃣ Logo et titre ---
+    try:
+        # Chemin vers ton logo Corvus (à adapter selon ton projet)
+        logo = Image.open("assets/logo_corvus.png")  
+        st.image(logo, width=150)
+    except Exception as e:
+        st.warning(f"Logo non trouvé : {e}")
 
+    st.title("📊 IA Statistique Corvus")
+    st.markdown("""
+    Bienvenue sur votre application d'analyse statistique automatisée.  
+    Sélectionnez une page ci-dessous pour démarrer votre exploration des données.
+    """)
+
+    # --- 3️⃣ Boutons de navigation ---
+    st.subheader("Navigation rapide")
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        if st.button("Analyse Descriptive"):
+            st.session_state.current_page = "descriptive"
+
+    with col2:
+        if st.button("Analyse de Distribution"):
+            st.session_state.current_page = "distribution"
+
+    with col3:
+        if st.button("Tests Multivariés"):
+            st.session_state.current_page = "multivariee"
+
+    # --- 4️⃣ Optionnel : ajout d'un pied de page ---
+    st.markdown("---")
+    st.markdown("© 2025 Corvus Analytics - Tous droits réservés")
