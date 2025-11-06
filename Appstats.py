@@ -5,7 +5,13 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("Corvus Analytics")
+ try:
+        # Chemin vers ton logo Corvus (à adapter selon ton projet)
+        logo = Image.open("assets/logoc.png")  
+        st.image(logo, width=150)
+    except Exception as e:
+        st.warning(f"Logo non trouvé : {e}")
+
 
 # --- Menu latéral ---
 st.sidebar.title("Navigation")
@@ -41,6 +47,7 @@ elif page == "Tests bivariés":
 elif page == "Tests multivariés":
     from Pages import page_testsmulti
     page_testsmulti.app()
+
 
 
 
