@@ -163,51 +163,51 @@ def propose_tests_multivariés(df, types_df, distribution_df=None, target_var=No
             results.append({"test": "MCA", "error": str(e)})
 
     # ---------------------------------------------------------------------
-   # 5️⃣ FAMD (Analyse Factorielle Mixte)
-# ---------------------------------------------------------------------
-     if len(num_vars) > 0 and len(cat_vars) > 0:
-          try:
-               import prince
+    # 5️⃣ FAMD (Analyse Factorielle Mixte)
+    # ---------------------------------------------------------------------
+    if len(num_vars) > 0 and len(cat_vars) > 0:
+        try:
+            import prince
 
-        # On garde uniquement les colonnes mixtes et on enlève les NA
-                df_mix = df[num_vars + cat_vars].dropna()
+            # On garde uniquement les colonnes mixtes et on enlève les NA
+            df_mix = df[num_vars + cat_vars].dropna()
 
-        # Initialisation et entraînement du modèle FAMD
-                famd = prince.FAMD(n_components=2, random_state=42).fit(df_mix)
+            # Initialisation et entraînement du modèle FAMD
+            famd = prince.FAMD(n_components=2, random_state=42).fit(df_mix)
 
-        # Coordonnées des individus
-                coords = famd.row_coordinates(df_mix)
+            # Coordonnées des individus
+            coords = famd.row_coordinates(df_mix)
 
-        # Récupération de la variance expliquée avec fallback
-                try:
-                    explained_var = famd.explained_inertia_
-                except AttributeError:
-                    eigvals = famd.eigenvalues_
-                    total = sum(eigvals)
-                    explained_var = [val / total for val in eigvals]
+            # Récupération de la variance expliquée avec fallback
+            try:
+                explained_var = famd.explained_inertia_
+            except AttributeError:
+                eigvals = famd.eigenvalues_
+                total = sum(eigvals)
+                explained_var = [val / total for val in eigvals]
 
-        # Construction du tableau de résultats
-                result_df = pd.DataFrame({
-                    "Composante": [f"Dim{i+1}" for i in range(len(explained_var))],
-                    "Variance expliquée": explained_var
-                })
+            # Construction du tableau de résultats
+            result_df = pd.DataFrame({
+                "Composante": [f"Dim{i+1}" for i in range(len(explained_var))],
+                "Variance expliquée": explained_var
+            })
 
-        # Tracé du graphique
-               fig, ax = plt.subplots(figsize=(5, 4))
-               ax.scatter(coords[0], coords[1], alpha=0.7)
-               ax.set_title("Analyse Factorielle Mixte (FAMD)")
-               ax.set_xlabel("Dimension 1")
-               ax.set_ylabel("Dimension 2")
+            # Tracé du graphique
+            fig, ax = plt.subplots(figsize=(5, 4))
+            ax.scatter(coords[0], coords[1], alpha=0.7)
+            ax.set_title("Analyse Factorielle Mixte (FAMD)")
+            ax.set_xlabel("Dimension 1")
+            ax.set_ylabel("Dimension 2")
 
-        # Sauvegarde du résultat
-               results.append({
-                  "test": "Analyse Factorielle Mixte (FAMD)",
-                  "result_df": result_df,
-                 "fig": fig
-              })
+            # Sauvegarde du résultat
+            results.append({
+                "test": "Analyse Factorielle Mixte (FAMD)",
+                "result_df": result_df,
+                "fig": fig
+            })
 
-          except Exception as e:
-              results.append({"test": "FAMD", "error": str(e)})
+        except Exception as e:
+            results.append({"test": "FAMD", "error": str(e)})
 
     # ---------------------------------------------------------------------
     # Fin
