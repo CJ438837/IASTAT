@@ -57,7 +57,7 @@ def propose_tests_multivariés(df, types_df, distribution_df=None, target_var=No
             })
             result_df["R² ajusté"] = model.rsquared_adj
 
-            fig, ax = plt.subplots(figsize=(5, 4))
+            fig, ax = plt.subplots()
             sns.scatterplot(x=model.fittedvalues, y=y, ax=ax, alpha=0.7)
             ax.plot(y, y, color="red", linestyle="--")
             ax.set_title(f"Régression linéaire multiple ({target_var})")
@@ -92,7 +92,7 @@ def propose_tests_multivariés(df, types_df, distribution_df=None, target_var=No
             })
             result_df["Pseudo R²"] = model.prsquared
 
-            fig, ax = plt.subplots(figsize=(5, 4))
+            fig, ax = plt.subplots()
             sns.histplot(model.predict(X), kde=True, ax=ax)
             ax.set_title(f"Régression logistique ({target_var})")
             ax.set_xlabel("Probabilité prédite")
@@ -120,7 +120,7 @@ def propose_tests_multivariés(df, types_df, distribution_df=None, target_var=No
                 "Variance cumulée": explained_var
             })
 
-            fig, ax = plt.subplots(figsize=(5, 4))
+            fig, ax = plt.subplots()
             ax.plot(range(1, len(explained_var)+1), explained_var, marker="o")
             ax.set_title("Analyse en composantes principales (PCA)")
             ax.set_xlabel("Composantes principales")
@@ -146,7 +146,7 @@ def propose_tests_multivariés(df, types_df, distribution_df=None, target_var=No
 
             result_df = coords.reset_index().rename(columns={"index": "Catégorie"})
 
-            fig, ax = plt.subplots(figsize=(5, 4))
+            fig, ax = plt.subplots()
             ax.scatter(coords[0], coords[1], alpha=0.7)
             for i, label in enumerate(coords.index):
                 ax.text(coords.iloc[i, 0], coords.iloc[i, 1], label, fontsize=8)
@@ -193,7 +193,7 @@ def propose_tests_multivariés(df, types_df, distribution_df=None, target_var=No
             })
 
             # Tracé du graphique
-            fig, ax = plt.subplots(figsize=(5, 4))
+            fig, ax = plt.subplots()
             ax.scatter(coords[0], coords[1], alpha=0.7)
             ax.set_title("Analyse Factorielle Mixte (FAMD)")
             ax.set_xlabel("Dimension 1")
