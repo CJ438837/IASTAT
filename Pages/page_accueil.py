@@ -17,13 +17,10 @@ def app():
     **Cliquez sur le bouton ci-dessous pour démarrer votre exploration des données.**
     """)
 
-    # --- 3️⃣ Bouton unique pour démarrer ---
-    if st.button("🪶 Démarrer mon analyse"):
-        st.session_state.current_page = "Fichier"  # Redirige vers la page Fichier
-
     # --- 4️⃣ Pied de page ---
     st.markdown("---")
     st.markdown("© 2025 Corvus Analytics - Tous droits réservés")
+
 
 
 
