@@ -1,14 +1,12 @@
-import streamlit as st
-import streamlit as st
+import os
 from PIL import Image
+import streamlit as st
 
 def app():
     st.title("Bienvenue sur IA_STAT")
 
-    # --- Affichage du logo ---
-    logo = Image.open("assets/logo.png")  # chemin relatif à ton fichier .py
-    st.image(logo, width=200)  # tu peux ajuster la largeur en px
-
-    st.write("Analyse statistique interactive pour vos données.")
-
-
+    # chemin absolu du fichier logo
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # dossier de page_accueil.py
+    logo_path = os.path.join(BASE_DIR, "..", "assets", "logo.png")
+    logo = Image.open(logo_path)
+    st.image(logo, width=200)
