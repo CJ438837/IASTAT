@@ -19,9 +19,10 @@ def app():
 
     # --- 3️⃣ Bouton unique pour démarrer ---
     if st.button("🪶 Démarrer mon analyse"):
-        st.session_state.current_page = "Fichier"  # Redirige vers la page Fichier
+        st.session_state.current_page = "fichier"  # Redirige vers la page Fichier
 
     # --- 4️⃣ Pied de page ---
     st.markdown("---")
     st.markdown("© 2025 Corvus Analytics - Tous droits réservés")
+
 
