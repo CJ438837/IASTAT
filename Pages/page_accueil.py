@@ -13,7 +13,6 @@ def app():
     except Exception as e:
         st.warning(f"Logo non trouvé : {e}")
 
-    st.title("📊 IA Statistique Corvus")
     st.markdown("""
     Bienvenue sur votre application d'analyse statistique automatisée.  
     Sélectionnez une page ci-dessous pour démarrer votre exploration des données.
@@ -38,6 +37,7 @@ def app():
     # --- 4️⃣ Optionnel : ajout d'un pied de page ---
     st.markdown("---")
     st.markdown("© 2025 Corvus Analytics - Tous droits réservés")
+
 
 
 
