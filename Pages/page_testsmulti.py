@@ -1,73 +1,83 @@
-# Pages/page_testsmulti.py
 import streamlit as st
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
-
 from modules.IA_STAT_testmultivaries import propose_tests_multivariés
 
-plt.style.use("seaborn-v0_8-muted")  # même style que page bivariées
+plt.style.use("seaborn-v0_8-muted")
 
-def app():
-    st.title("📊 Tests statistiques multivariés")
+def page_testsmulti():
+    st.title("📊 Tests Multivariés Avancés")
 
-    # --- 1️⃣ Vérifications préalables ---
-    if "df_selected" not in st.session_state:
-        st.warning("Veuillez d'abord importer un fichier dans la page Fichier.")
-        st.stop()
-    if "types_df" not in st.session_state:
-        st.warning("Veuillez d'abord détecter les types de variables dans la page Variables.")
-        st.stop()
-    if "distribution_df" not in st.session_state:
-        st.warning("Veuillez d'abord analyser la distribution des données dans la page Distribution.")
-        st.stop()
+    # Récupération du fichier chargé dans la page Fichier
+    if "df" not in st.session_state or st.session_state["df"] is None:
+        st.warning("⚠️ Veuillez d'abord charger un fichier dans l'onglet **Fichier**.")
+        return
 
-    # --- 2️⃣ Récupération des données ---
-    df = st.session_state["df_selected"].copy()
-    types_df = st.session_state["types_df"].copy()
-    distribution_df = st.session_state["distribution_df"].copy()
+    df = st.session_state["df"]
 
-    st.markdown("### 🎯 Sélection de la variable à expliquer et des variables explicatives")
+    # Chargement des types de variables (s’ils sont déjà détectés)
+    if "types_df" not in st.session_state or st.session_state["types_df"] is None:
+        types_df = pd.DataFrame({
+            "variable": df.columns,
+            "type": [
+                "numérique" if pd.api.types.is_numeric_dtype(df[col]) else "catégorielle"
+                for col in df.columns
+            ]
+        })
+        st.session_state["types_df"] = types_df
+    else:
+        types_df = st.session_state["types_df"]
 
-    # --- Choix de la variable cible ---
-    target_var = st.selectbox(
-        "Variable à expliquer (target) :",
-        options=types_df["variable"].tolist()
+    st.success(f"✅ Données disponibles ({df.shape[0]} lignes, {df.shape[1]} colonnes)")
+    st.write("### 📋 Aperçu des données")
+    st.dataframe(df.head())
+
+    # --- Sélection de la variable à expliquer ---
+    st.divider()
+    st.subheader("🎯 Sélection des variables")
+
+    target_var = st.selectbox("Variable à expliquer :", df.columns)
+
+    explicatives = st.multiselect(
+        "Variables explicatives :",
+        [c for c in df.columns if c != target_var],
+        default=[]
     )
 
-    # --- Choix des variables explicatives ---
-    predictor_vars = st.multiselect(
-        "Variables explicatives (predictors) :",
-        options=[v for v in types_df["variable"].tolist() if v != target_var]
-    )
+    if not explicatives:
+        st.info("💡 Sélectionnez au moins une variable explicative pour continuer.")
+        return
 
-    if not predictor_vars:
-        st.warning("⚠️ Veuillez sélectionner au moins une variable explicative.")
-        st.stop()
-
-    lancer_tests = st.button("🧠 Exécuter le test multivarié")
-
-    if lancer_tests:
-        with st.spinner("Exécution du test en cours... ⏳"):
+    # --- Bouton d'exécution ---
+    if st.button("🚀 Lancer les tests multivariés", use_container_width=True):
+        with st.spinner("Analyse en cours..."):
             try:
                 results = propose_tests_multivariés(
-                    df=df,
-                    types_df=types_df,
+                    df,
+                    types_df,
                     target_var=target_var,
-                    predictor_vars=predictor_vars
+                    explicatives=explicatives
                 )
 
-                st.success("✅ Test(s) exécuté(s) avec succès !")
-
-                # --- Affichage des résultats ---
                 for res in results:
-                    st.markdown(f"### 🧪 {res['test']}")
-                    if "result_df" in res:
-                        st.dataframe(res["result_df"])
-                    if "fig" in res and res["fig"] is not None:
+                    st.divider()
+                    st.subheader(f"🧠 {res.get('test', 'Test inconnu')}")
+
+                    # Gestion des erreurs
+                    if "error" in res:
+                        st.error(f"❌ Erreur : {res['error']}")
+                        continue
+                    if "message" in res:
+                        st.warning(res["message"])
+                        continue
+
+                    # Tableau des résultats
+                    if isinstance(res.get("result_df"), pd.DataFrame) and not res["result_df"].empty:
+                        st.dataframe(res["result_df"], use_container_width=True)
+
+                    # Graphique
+                    if res.get("fig") is not None:
                         st.pyplot(res["fig"])
-                        plt.close(res["fig"])
 
             except Exception as e:
-                st.error(f"❌ Une erreur est survenue pendant l'exécution du test : {e}")
+                st.error(f"❌ Une erreur est survenue pendant l'exécution : {e}")
