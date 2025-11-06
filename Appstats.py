@@ -5,7 +5,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("📊 Appstats - Analyse Statistique Interactive")
+st.title("Corvus Analytics")
 
 # --- Menu latéral ---
 st.sidebar.title("Navigation")
@@ -41,6 +41,7 @@ elif page == "Tests bivariés":
 elif page == "Tests multivariés":
     from Pages import page_testsmulti
     page_testsmulti.app()
+
 
 
 
