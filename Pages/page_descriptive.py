@@ -1,8 +1,8 @@
 import streamlit as st
 import os
+import pandas as pd
 from modules.IA_STAT_descriptive_251125 import descriptive_analysis
 from modules.IA_STAT_Illustrations_251125 import plot_descriptive
-import pandas as pd
 
 def app():
     st.title("📊 Analyse Descriptive")
@@ -22,52 +22,66 @@ def app():
 
     # --- 2️⃣ Sélection des variables ---
     st.subheader("Sélection des variables")
-    numeric_vars = types_df[types_df["type"] == "numérique"]["variable"].tolist()
-    cat_vars = types_df[types_df["type"].isin(["catégorielle", "binaire"])]["variable"].tolist()
-    all_vars = numeric_vars + cat_vars
-
-    explicatives = st.multiselect("Choisir les variables à analyser", options=all_vars)
-
+    all_vars = types_df["variable"].tolist()
+    explicatives = st.multiselect("Variables à analyser :", all_vars)
     if not explicatives:
-        st.warning("Sélectionnez au moins une variable pour continuer.")
+        st.warning("Veuillez sélectionner au moins une variable.")
         st.stop()
 
-    # Optionnel : variable catégorielle pour grouper
-    group_var = st.selectbox("Optionnel : Grouper par variable catégorielle", options=[None]+cat_vars)
+    group_var = st.selectbox("Grouper par (optionnel) :", [None] + all_vars)
 
-    # --- 3️⃣ Résumé descriptif ---
-    st.subheader("Résumé descriptif des variables")
+    # --- 3️⃣ Lancer l'analyse ---
+    if st.button("📈 Lancer l'analyse descriptive") or "result_df" not in st.session_state:
 
-    if group_var:
-        grouped = df.groupby(group_var)
-        for grp_name, grp_df in grouped:
-            st.markdown(f"### Groupe : {grp_name}")
-            summary = descriptive_analysis(grp_df, types_df[types_df["variable"].isin(explicatives)])
-            for var, stats in summary.items():
-                st.markdown(f"**{var}**")
-                st.json(stats)
+        # Nettoyage des anciens résultats
+        st.session_state.result_df = pd.DataFrame()
+        st.session_state.summary_dict = {}
+
+        groupes = [None]
+        if group_var:
+            groupes = df[group_var].dropna().unique()
+
+        records = []
+        for g in groupes:
+            if g is not None:
+                df_grp = df[df[group_var] == g]
+                grp_label = str(g)
+            else:
+                df_grp = df
+                grp_label = "Tous"
+
+            summary_dict = descriptive_analysis(df_grp[explicatives],
+                                                types_df[types_df["variable"].isin(explicatives)])
+
+            # Transformer en dataframe plat
+            for var, stats in summary_dict.items():
+                flat = {"Variable": var, "Groupe": grp_label}
+                for k, v in stats.items():
+                    if isinstance(v, dict):
+                        flat[k] = str(v)
+                    else:
+                        flat[k] = v
+                records.append(flat)
+
+        st.session_state.result_df = pd.DataFrame(records)
+        st.session_state.summary_dict = summary_dict
+
+    # --- 4️⃣ Affichage du tableau ---
+    st.subheader("Résumé descriptif")
+    if not st.session_state.result_df.empty:
+        st.dataframe(st.session_state.result_df)
     else:
-        summary = descriptive_analysis(df[explicatives], types_df[types_df["variable"].isin(explicatives)])
-        for var, stats in summary.items():
-            st.markdown(f"**{var}**")
-            st.json(stats)
+        st.warning("Aucun résultat à afficher. Lancez l'analyse.")
 
-    # --- 4️⃣ Graphiques descriptifs ---
+    # --- 5️⃣ Graphiques descriptifs ---
     st.subheader("Visualisations des variables")
     output_folder = "plots"
+    plot_descriptive(df, types_df, output_folder=output_folder)
 
-    # Crée le dossier si nécessaire
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-
-    # Génération des graphiques uniquement pour les variables sélectionnées
-    plot_descriptive(df[explicatives], types_df[types_df["variable"].isin(explicatives)], 
-                     output_folder=output_folder)
-
-    # Liste des fichiers générés pour les variables sélectionnées
-    plot_files = sorted([f for f in os.listdir(output_folder) if f.endswith(".png") and any(v in f for v in explicatives)])
+    # Liste des fichiers générés
+    plot_files = sorted([f for f in os.listdir(output_folder) if f.endswith(".png")])
     if not plot_files:
-        st.warning("Aucun graphique généré pour les variables sélectionnées.")
+        st.warning("Aucun graphique généré.")
         return
 
     # Initialisation de l'indice du graphique
