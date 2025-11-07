@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit as st
 
 # Charger le thème CORVUS
 with open("assets/corvus_theme.css") as f:
@@ -10,18 +9,36 @@ st.set_page_config(
     layout="wide"
 )
 
+# 🔄 Si la page a été modifiée par un bouton
+if "page" not in st.session_state:
+    st.session_state.page = "Accueil"
 
 # --- Menu latéral ---
 st.sidebar.title("Navigation")
-page = st.sidebar.radio("Aller à :", [
-    "Accueil",
-    "Fichier",
-    "Variables",
-    "Descriptive",
-    "Distribution",
-    "Tests bivariés",
-    "Tests multivariés"
-])
+page = st.sidebar.radio(
+    "Aller à :",
+    [
+        "Accueil",
+        "Fichier",
+        "Variables",
+        "Descriptive",
+        "Distribution",
+        "Tests bivariés",
+        "Tests multivariés"
+    ],
+    index=[
+        "Accueil",
+        "Fichier",
+        "Variables",
+        "Descriptive",
+        "Distribution",
+        "Tests bivariés",
+        "Tests multivariés"
+    ].index(st.session_state.page)
+)
+
+# Synchronisation pour que le bouton fonctionne
+st.session_state.page = page
 
 # --- Chargement des pages ---
 if page == "Accueil":
@@ -45,11 +62,3 @@ elif page == "Tests bivariés":
 elif page == "Tests multivariés":
     from Pages import page_testsmulti
     page_testsmulti.app()
-
-
-
-
-
-
-
-
