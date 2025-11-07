@@ -26,7 +26,7 @@ def app():
     # --- 4️⃣ Bouton principal (vers la page Fichier) ---
     # Fonctionne uniquement si tu as le multipage natif Streamlit
     if st.button("Démarrer mon analyse"):
-        st.switch_page("Pages/page_fichier.py")
+        st.session_state.current_page = "fichier"
 
     # --- 5️⃣ Footer ---
     st.markdown("---")
@@ -36,3 +36,4 @@ def app():
         "</div>",
         unsafe_allow_html=True,
     )
+
