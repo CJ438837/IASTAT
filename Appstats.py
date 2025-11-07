@@ -1,4 +1,9 @@
 import streamlit as st
+import streamlit as st
+
+# Charger le thème CORVUS
+with open("assets/corvus_theme.css") as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 st.set_page_config(
     page_title="Appstats",
@@ -40,6 +45,7 @@ elif page == "Tests bivariés":
 elif page == "Tests multivariés":
     from Pages import page_testsmulti
     page_testsmulti.app()
+
 
 
 
