@@ -27,7 +27,6 @@ def app():
     # Fonctionne uniquement si tu as le multipage natif Streamlit
     if st.button("Démarrer mon analyse"):
         st.session_state.page = "Fichier"
-        st.session_state.trigger = True  # pas obligatoire mais utile
 
 
 
@@ -39,6 +38,7 @@ def app():
         "</div>",
         unsafe_allow_html=True,
     )
+
 
 
 
