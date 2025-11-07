@@ -1,0 +1,77 @@
+/* ============================
+   THEME CORVUS - GLOBAL STREAMLIT
+   ============================ */
+
+:root {
+    --corvus-dark: #1B2A33;
+    --corvus-light: #F4F4F4;
+    --corvus-accent: #00A8E8;
+    --corvus-text: #1B2A33;
+    --corvus-white: #FFFFFF;
+}
+
+/* Page background */
+.stApp {
+    background-color: var(--corvus-light) !important;
+}
+
+/* Titles */
+h1, h2, h3, h4, h5 {
+    color: var(--corvus-dark) !important;
+    font-family: 'Montserrat', sans-serif !important;
+    font-weight: 700 !important;
+}
+
+/* Regular text */
+p, span, div {
+    font-family: 'Inter', sans-serif !important;
+    color: var(--corvus-dark) !important;
+}
+
+/* Buttons */
+.stButton button {
+    background-color: var(--corvus-dark) !important;
+    color: var(--corvus-white) !important;
+    border-radius: 10px !important;
+    padding: 0.6em 1.2em !important;
+    border: none !important;
+    font-size: 1.1em !important;
+    transition: 0.2s ease-in-out !important;
+}
+
+.stButton button:hover {
+    background-color: var(--corvus-accent) !important;
+    color: var(--corvus-dark) !important;
+    transform: scale(1.03);
+}
+
+/* Cards */
+div[data-testid="stExpander"] {
+    background-color: var(--corvus-white) !important;
+    border: 1px solid #dce1e3 !important;
+    border-radius: 10px !important;
+}
+
+/* Sidebar */
+.sidebar .sidebar-content {
+    background-color: var(--corvus-dark) !important;
+}
+
+.css-1d391kg, .css-1v0mbdj {
+    background-color: var(--corvus-dark) !important;
+    color: var(--corvus-white) !important;
+}
+
+/* Tables */
+.stDataFrame {
+    background-color: var(--corvus-white) !important;
+    border-radius: 10px !important;
+    padding: 10px !important;
+}
+
+/* Images centering */
+img {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
