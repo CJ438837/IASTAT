@@ -7,7 +7,7 @@ def app():
 
     # --- 2️⃣ Logo et titre ---
     try:
-        logo = Image.open("assets/logoc.png")  
+        logo = Image.open("assets/logo.png")  
         st.image(logo, width=600)
     except Exception as e:
         st.warning(f"Logo non trouvé : {e}")
@@ -20,6 +20,7 @@ def app():
     # --- 4️⃣ Pied de page ---
     st.markdown("---")
     st.markdown("© 2025 Corvus Analytics - Tous droits réservés")
+
 
 
 
