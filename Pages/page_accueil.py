@@ -27,7 +27,8 @@ def app():
     # Fonctionne uniquement si tu as le multipage natif Streamlit
     if st.button("Démarrer mon analyse"):
         st.session_state.page = "Fichier"
-        st.experimental_rerun()
+        st.rerun()
+
 
 
     # --- 5️⃣ Footer ---
@@ -38,6 +39,7 @@ def app():
         "</div>",
         unsafe_allow_html=True,
     )
+
 
 
 
