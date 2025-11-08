@@ -9,9 +9,11 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- ⚙️ Initialisation de la session ---
+# --- ⚙️ Initialisation ---
 if "page" not in st.session_state:
     st.session_state.page = "Accueil"
+if "target_page" not in st.session_state:
+    st.session_state.target_page = st.session_state.page
 
 # --- 🧭 Menu latéral ---
 st.sidebar.title("Navigation")
@@ -26,7 +28,7 @@ pages = [
     "Tests multivariés"
 ]
 
-# ⚡ Synchronisation du radio avec la session (clé partagée)
+# Radio synchronisé avec la page actuelle
 page = st.sidebar.radio(
     "Aller à :",
     pages,
@@ -34,7 +36,11 @@ page = st.sidebar.radio(
     key="page"
 )
 
-# --- 🚀 Chargement dynamique des pages ---
+# Synchronisation : si une redirection est demandée depuis une autre page
+if st.session_state.page != st.session_state.target_page:
+    st.session_state.page = st.session_state.target_page
+
+# --- 🚀 Chargement des pages ---
 if st.session_state.page == "Accueil":
     from Pages import page_accueil
     page_accueil.app()
