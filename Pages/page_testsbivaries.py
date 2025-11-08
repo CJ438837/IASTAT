@@ -102,5 +102,4 @@ def app():
             st.rerun()
     with col3:
         if st.button("➡️ Page suivante : Tests multivariés"):
-            st.session_state["current_page"] = "Tests multivariés"
-            st.rerun()
+            st.session_state.target_page = "Tests multivariés"
