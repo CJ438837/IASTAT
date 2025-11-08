@@ -12,7 +12,7 @@ tokens = re.findall(r'\b\w+\b', description.lower())
 stopwords_fr = set([
     "le","la","les","un","une","des","de","du","et","en","au","aux","avec",
     "pour","sur","dans","par","au","a","ce","ces","est","sont","ou","où","se",
-    "sa","son","que","qui","ne","pas","plus","moins","comme","donc"
+    "sa","son","que","qui","ne","pas","plus","moins","comme","donc", "d'"
 ])
 keywords_fr = [w for w in tokens if w not in stopwords_fr]
 
