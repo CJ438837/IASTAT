@@ -91,7 +91,7 @@ div[data-testid="stExpander"] {
 
 /* Sidebar */
 section[data-testid="stSidebar"] {
-    background-color: var(--corvus-dark) !important;
+    background-color: var(--corvus-white) !important;
     color: var(--corvus-white) !important;
 }
 
