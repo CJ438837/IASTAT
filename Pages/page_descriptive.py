@@ -155,6 +155,5 @@ def app():
     st.markdown("---")
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("➡️ Passer à la page Tests statistiques", use_container_width=True):
-            st.session_state.page = "Tests statistiques"
-            st.experimental_rerun()
+        if st.button("➡️ Passer à la page Distribution", use_container_width=True):
+               st.session_state.target_page = "Distribution"
