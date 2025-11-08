@@ -1,4 +1,4 @@
-anglaisimport streamlit as st
+import streamlit as st
 import pandas as pd
 import re
 from Bio import Entrez
@@ -13,14 +13,14 @@ def app():
         st.warning(f"Impossible de charger le thème Corvus : {e}")
 
     # --- 📂 Page Fichier ---
-    st.header("📁 Importer le fichier pour l'étude")
-    
+    st.header("📁 Import your dataset for analysis")
+
     # --- 1️⃣ Upload du fichier ---
     uploaded_file = st.file_uploader(
-        "Choisissez votre fichier Excel ou CSV", 
+        "Choose your Excel or CSV file", 
         type=['xlsx', 'xls', 'csv']
     )
-    
+
     if uploaded_file:
         # Lecture du fichier
         try:
@@ -28,49 +28,58 @@ def app():
                 df = pd.read_excel(uploaded_file)
             else:
                 df = pd.read_csv(uploaded_file)
-            st.success(f"Fichier '{uploaded_file.name}' chargé avec succès !")
+            st.success(f"File '{uploaded_file.name}' successfully loaded!")
         except Exception as e:
-            st.error(f"Erreur lors de la lecture du fichier : {e}")
+            st.error(f"Error while reading the file: {e}")
             return
         
         # --- 2️⃣ Aperçu des données ---
-        st.subheader("Aperçu des données")
+        st.subheader("Data preview")
         st.dataframe(df.head(10), use_container_width=True)
 
         # --- 3️⃣ Sélection des colonnes ---
-        st.subheader("Sélection des colonnes à inclure dans l'étude")
+        st.subheader("Select columns to include in the study")
         selected_cols = st.multiselect(
-            "Cochez les colonnes à inclure",
+            "Check the columns to include",
             options=df.columns.tolist(),
             default=df.columns.tolist()
         )
         df_selected = df[selected_cols]
-        st.write(f"Colonnes sélectionnées ({len(selected_cols)}): {selected_cols}")
+        st.write(f"Selected columns ({len(selected_cols)}): {selected_cols}")
 
         # --- 4️⃣ Description de l'étude ---
-        st.subheader("Décrivez le contexte de votre étude en quelques mots (anglais)")
+        st.subheader("Describe your study in a few words (in English)")
         description = st.text_area(
-            "Décrivez votre étude en quelques phrases :",
-            placeholder="Ex : Étude de l'effet de l'âge et du poids sur la pression artérielle..."
+            "Example: Study of the effect of age and weight on blood pressure...",
+            placeholder="Enter a short English description..."
         )
         
         # --- 5️⃣ Extraction de mots-clés ---
         if description:
             tokens = re.findall(r'\b\w+\b', description.lower())
-            stopwords_fr = set([
-                "le","la","les","un","une","des","de","du","et","en","au","aux","avec",
-                "pour","sur","dans","par","au","a","ce","ces","est","sont","ou","où","se",
-                "sa","son","que","qui","ne","pas","plus","moins","comme","donc", "d"
+            stopwords_en = set([
+                "the","a","an","of","and","in","on","for","to","from","by","with","about",
+                "as","at","into","that","this","those","these","is","are","be","was","were",
+                "it","its","but","or","nor","if","than","so","because","due","such","their",
+                "they","he","she","his","her","we","you","your","our","can","may","will",
+                "would","should","could","which","has","have","had"
             ])
-            keywords_fr = [w for w in tokens if w not in stopwords_fr]
-            query = " AND ".join(keywords_fr)
+            keywords = [w for w in tokens if w not in stopwords_en]
 
-            st.write(f"**Mots-clés extraits :** {keywords_fr}")
-            st.write(f"**Requête PubMed :** {query}")
+            # --- combinaison plus souple pour de meilleurs résultats PubMed ---
+            if len(keywords) <= 4:
+                query = " AND ".join(keywords)
+            elif len(keywords) <= 8:
+                query = "(" + " AND ".join(keywords[:3]) + ") AND (" + " OR ".join(keywords[3:]) + ")"
+            else:
+                query = " OR ".join(keywords)
+
+            st.write(f"**Extracted keywords:** {keywords}")
+            st.write(f"**PubMed query:** `{query}`")
 
             # --- 6️⃣ Recherche PubMed ---
-            if st.button("🔍 Rechercher articles PubMed"):
-                Entrez.email = "ton.email@example.com"  # à remplacer par ton adresse
+            if st.button("🔍 Search PubMed articles"):
+                Entrez.email = "your.email@example.com"  # à remplacer par ton adresse
                 try:
                     handle = Entrez.esearch(db="pubmed", term=query, retmax=10, sort="relevance")
                     record = Entrez.read(handle)
@@ -78,17 +87,13 @@ def app():
                     pmids = record['IdList']
                     
                     if not pmids:
-                        st.warning("Aucun article trouvé.")
+                        st.warning("No articles found.")
                     else:
-                        st.subheader("Articles PubMed suggérés")
+                        st.subheader("Suggested PubMed Articles")
                         for i, pmid in enumerate(pmids, 1):
                             st.markdown(f"{i}. [https://pubmed.ncbi.nlm.nih.gov/{pmid}/](https://pubmed.ncbi.nlm.nih.gov/{pmid}/)")
                 except Exception as e:
-                    st.error(f"Erreur lors de la recherche PubMed : {e}")
+                    st.error(f"Error during PubMed search: {e}")
         
-        # --- 7️⃣ Récupération du DataFrame sélectionné ---
+        # --- 7️⃣ Sauvegarde du DataFrame sélectionné ---
         st.session_state['df_selected'] = df_selected
-
-
-
-
