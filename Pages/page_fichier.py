@@ -104,4 +104,5 @@ def app():
         with col2:
             if st.button("➡️ Passer à la page Variables", use_container_width=True):
                 st.session_state.page = "Variables"
-                st.experimental_rerun()
+               
+
