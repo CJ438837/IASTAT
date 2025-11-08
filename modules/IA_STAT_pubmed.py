@@ -16,7 +16,7 @@ stopwords_fr = set([
 ])
 keywords_fr = [w for w in tokens if w not in stopwords_fr]
 
-query = " OR ".join(keywords_fr)
+query = " AND ".join(keywords_fr)
 
 print(f"\nMots-clés français : {keywords_fr}")
 print(f"Requête PubMed : {query}")
