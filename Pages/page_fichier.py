@@ -60,7 +60,7 @@ def app():
             stopwords_fr = set([
                 "le","la","les","un","une","des","de","du","et","en","au","aux","avec",
                 "pour","sur","dans","par","au","a","ce","ces","est","sont","ou","où","se",
-                "sa","son","que","qui","ne","pas","plus","moins","comme","donc"
+                "sa","son","que","qui","ne","pas","plus","moins","comme","donc", "d'"
             ])
             keywords_fr = [w for w in tokens if w not in stopwords_fr]
             query = " OR ".join(keywords_fr)
@@ -88,3 +88,4 @@ def app():
         
         # --- 7️⃣ Récupération du DataFrame sélectionné ---
         st.session_state['df_selected'] = df_selected
+
