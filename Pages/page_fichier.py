@@ -1,4 +1,4 @@
-import streamlit as st
+anglaisimport streamlit as st
 import pandas as pd
 import re
 from Bio import Entrez
@@ -48,7 +48,7 @@ def app():
         st.write(f"Colonnes sélectionnées ({len(selected_cols)}): {selected_cols}")
 
         # --- 4️⃣ Description de l'étude ---
-        st.subheader("Décrivez le contexte de votre étude")
+        st.subheader("Décrivez le contexte de votre étude en quelques mots (anglais)")
         description = st.text_area(
             "Décrivez votre étude en quelques phrases :",
             placeholder="Ex : Étude de l'effet de l'âge et du poids sur la pression artérielle..."
@@ -88,6 +88,7 @@ def app():
         
         # --- 7️⃣ Récupération du DataFrame sélectionné ---
         st.session_state['df_selected'] = df_selected
+
 
 
 
