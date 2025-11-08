@@ -49,7 +49,6 @@ def app():
     st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
     st.markdown("### 🚀 Lancer l'analyse descriptive")
 
-    # On ne lance l'analyse que si l'utilisateur clique
     run_analysis = st.button("📈 Démarrer l'analyse descriptive", use_container_width=True)
 
     if run_analysis:
@@ -86,61 +85,63 @@ def app():
 
         st.success("✅ Analyse terminée avec succès !")
 
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # --- 4️⃣ Résumé descriptif ---
-    st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
-    st.markdown("### 🧾 Résumé descriptif")
-
-    if "result_df" in st.session_state and not st.session_state.result_df.empty:
+        # --- 4️⃣ Résumé descriptif ---
+        st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
+        st.markdown("### 🧾 Résumé descriptif")
         st.dataframe(st.session_state.result_df, use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # --- 5️⃣ Graphiques descriptifs ---
+        st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
+        st.markdown("### 📉 Visualisations des variables sélectionnées")
+
+        output_folder = "plots"
+        os.makedirs(output_folder, exist_ok=True)
+
+        # --- Barre de progression ---
+        progress = st.progress(0)
+        st.write("🔄 Génération des graphiques...")
+
+        # Appel à la fonction mise à jour
+        plot_descriptive(
+            df=df,
+            types_df=types_df,
+            output_folder=output_folder,
+            selected_vars=explicatives,
+            group_var=group_var
+        )
+
+        progress.progress(100)
+        st.success("✅ Graphiques générés avec succès !")
+
+        plot_files = sorted([f for f in os.listdir(output_folder) if f.endswith(".png")])
+        if not plot_files:
+            st.warning("Aucun graphique généré pour les variables sélectionnées.")
+            st.markdown("</div>", unsafe_allow_html=True)
+            return
+
+        # --- Navigation entre les graphiques ---
+        if "plot_index" not in st.session_state:
+            st.session_state.plot_index = 0
+
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col1:
+            if st.button("⬅️ Précédent"):
+                if st.session_state.plot_index > 0:
+                    st.session_state.plot_index -= 1
+        with col3:
+            if st.button("Suivant ➡️"):
+                if st.session_state.plot_index < len(plot_files) - 1:
+                    st.session_state.plot_index += 1
+
+        plot_path = os.path.join(output_folder, plot_files[st.session_state.plot_index])
+        st.image(plot_path, use_column_width=True)
+        st.caption(f"Graphique {st.session_state.plot_index + 1} / {len(plot_files)} : {plot_files[st.session_state.plot_index]}")
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
     else:
         st.info("Cliquez sur **Démarrer l'analyse descriptive** pour afficher les résultats.")
-        st.stop()
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # --- 5️⃣ Graphiques descriptifs (variables sélectionnées uniquement) ---
-    st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
-    st.markdown("### 📉 Visualisations des variables sélectionnées")
-
-    output_folder = "plots"
-    os.makedirs(output_folder, exist_ok=True)
-
-    # 🔧 On passe la variable de regroupement pour tracer les relations entre variables
-    plot_descriptive(
-        df=df,
-        types_df=types_df[types_df["variable"].isin(explicatives)],
-        output_folder=output_folder,
-        selected_vars=explicatives,
-        group_var=group_var
-    )
-
-    plot_files = sorted([f for f in os.listdir(output_folder) if f.endswith(".png")])
-    if not plot_files:
-        st.warning("Aucun graphique généré pour les variables sélectionnées.")
-        st.markdown("</div>", unsafe_allow_html=True)
-        return
-
-    # --- Navigation entre les graphiques ---
-    if "plot_index" not in st.session_state:
-        st.session_state.plot_index = 0
-
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col1:
-        if st.button("⬅️ Précédent"):
-            if st.session_state.plot_index > 0:
-                st.session_state.plot_index -= 1
-    with col3:
-        if st.button("Suivant ➡️"):
-            if st.session_state.plot_index < len(plot_files) - 1:
-                st.session_state.plot_index += 1
-
-    plot_path = os.path.join(output_folder, plot_files[st.session_state.plot_index])
-    st.image(plot_path, use_column_width=True)
-    st.caption(f"Graphique {st.session_state.plot_index + 1} / {len(plot_files)} : {plot_files[st.session_state.plot_index]}")
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
     # --- ➡️ Navigation ---
     st.markdown("---")
