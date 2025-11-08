@@ -63,7 +63,7 @@ def app():
                 "sa","son","que","qui","ne","pas","plus","moins","comme","donc", "d'"
             ])
             keywords_fr = [w for w in tokens if w not in stopwords_fr]
-            query = " OR ".join(keywords_fr)
+            query = " AND ".join(keywords_fr)
 
             st.write(f"**Mots-clés extraits :** {keywords_fr}")
             st.write(f"**Requête PubMed :** {query}")
@@ -88,4 +88,5 @@ def app():
         
         # --- 7️⃣ Récupération du DataFrame sélectionné ---
         st.session_state['df_selected'] = df_selected
+
 
