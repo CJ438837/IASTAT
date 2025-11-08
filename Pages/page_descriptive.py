@@ -85,63 +85,71 @@ def app():
 
         st.success("✅ Analyse terminée avec succès !")
 
-        # --- 4️⃣ Résumé descriptif ---
-        st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
-        st.markdown("### 🧾 Résumé descriptif")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- 4️⃣ Résumé descriptif ---
+    st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
+    st.markdown("### 🧾 Résumé descriptif")
+
+    if "result_df" in st.session_state and not st.session_state.result_df.empty:
         st.dataframe(st.session_state.result_df, use_container_width=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+    else:
+        st.info("Cliquez sur **Démarrer l'analyse descriptive** pour afficher les résultats.")
+        st.stop()
 
-        # --- 5️⃣ Graphiques descriptifs ---
-        st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
-        st.markdown("### 📉 Visualisations des variables sélectionnées")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-        output_folder = "plots"
-        os.makedirs(output_folder, exist_ok=True)
+    # --- 5️⃣ Graphiques descriptifs ---
+    st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
+    st.markdown("### 📉 Visualisations des variables sélectionnées")
 
-        # --- Barre de progression ---
-        progress = st.progress(0)
-        st.write("🔄 Génération des graphiques...")
+    output_folder = "plots"
+    os.makedirs(output_folder, exist_ok=True)
 
-        # Appel à la fonction mise à jour
+    # ⚙️ Génération des graphiques uniquement après le clic sur "Démarrer"
+    if run_analysis:
         plot_descriptive(
             df=df,
-            types_df=types_df,
+            types_df=types_df[types_df["variable"].isin(explicatives)],
             output_folder=output_folder,
             selected_vars=explicatives,
             group_var=group_var
         )
 
-        progress.progress(100)
-        st.success("✅ Graphiques générés avec succès !")
+    plot_files = sorted([f for f in os.listdir(output_folder) if f.endswith(".png")])
+    if not plot_files:
+        st.warning("Aucun graphique généré pour les variables sélectionnées.")
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
 
-        plot_files = sorted([f for f in os.listdir(output_folder) if f.endswith(".png")])
-        if not plot_files:
-            st.warning("Aucun graphique généré pour les variables sélectionnées.")
-            st.markdown("</div>", unsafe_allow_html=True)
-            return
+    # --- Navigation entre les graphiques (sans refresh complet) ---
+    if "plot_index" not in st.session_state:
+        st.session_state.plot_index = 0
 
-        # --- Navigation entre les graphiques ---
-        if "plot_index" not in st.session_state:
-            st.session_state.plot_index = 0
+    def prev_plot():
+        if st.session_state.plot_index > 0:
+            st.session_state.plot_index -= 1
 
+    def next_plot():
+        if st.session_state.plot_index < len(plot_files) - 1:
+            st.session_state.plot_index += 1
+
+    nav_container = st.container()
+    with nav_container:
         col1, col2, col3 = st.columns([1, 2, 1])
         with col1:
-            if st.button("⬅️ Précédent"):
-                if st.session_state.plot_index > 0:
-                    st.session_state.plot_index -= 1
+            st.button("⬅️ Précédent", on_click=prev_plot)
         with col3:
-            if st.button("Suivant ➡️"):
-                if st.session_state.plot_index < len(plot_files) - 1:
-                    st.session_state.plot_index += 1
+            st.button("Suivant ➡️", on_click=next_plot)
 
-        plot_path = os.path.join(output_folder, plot_files[st.session_state.plot_index])
-        st.image(plot_path, use_column_width=True)
-        st.caption(f"Graphique {st.session_state.plot_index + 1} / {len(plot_files)} : {plot_files[st.session_state.plot_index]}")
+    plot_path = os.path.join(output_folder, plot_files[st.session_state.plot_index])
+    st.image(plot_path, use_column_width=True)
+    st.caption(
+        f"Graphique {st.session_state.plot_index + 1} / {len(plot_files)} : "
+        f"{plot_files[st.session_state.plot_index]}"
+    )
 
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    else:
-        st.info("Cliquez sur **Démarrer l'analyse descriptive** pour afficher les résultats.")
+    st.markdown("</div>", unsafe_allow_html=True)
 
     # --- ➡️ Navigation ---
     st.markdown("---")
