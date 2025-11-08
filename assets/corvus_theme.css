@@ -55,7 +55,7 @@ div.stButton > button:hover,
 button[kind="primary"]:hover,
 button[data-testid="baseButton-primary"]:hover {
     background-color: var(--corvus-accent) !important;
-    color: var(--corvus-dark) !important; /* texte foncé au survol */
+    color: var(--corvus-white) !important; /* texte foncé au survol */
     transform: scale(1.04) !important;
 }
 
