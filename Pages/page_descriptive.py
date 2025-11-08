@@ -1,4 +1,4 @@
-
+# Pages/3_Analyse_Descriptive.py
 import streamlit as st
 import os
 import pandas as pd
@@ -49,7 +49,10 @@ def app():
     st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
     st.markdown("### 🚀 Lancer l'analyse descriptive")
 
-    if st.button("📈 Exécuter l'analyse", use_container_width=True) or "result_df" not in st.session_state:
+    # On ne lance l'analyse que si l'utilisateur clique
+    run_analysis = st.button("📈 Démarrer l'analyse descriptive", use_container_width=True)
+
+    if run_analysis:
         with st.spinner("Analyse en cours..."):
             st.session_state.result_df = pd.DataFrame()
             st.session_state.summary_dict = {}
@@ -75,10 +78,7 @@ def app():
                 for var, stats in summary_dict.items():
                     flat = {"Variable": var, "Groupe": grp_label}
                     for k, v in stats.items():
-                        if isinstance(v, dict):
-                            flat[k] = str(v)
-                        else:
-                            flat[k] = v
+                        flat[k] = str(v) if isinstance(v, dict) else v
                     records.append(flat)
 
             st.session_state.result_df = pd.DataFrame(records)
@@ -92,29 +92,37 @@ def app():
     st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
     st.markdown("### 🧾 Résumé descriptif")
 
-    if not st.session_state.result_df.empty:
+    if "result_df" in st.session_state and not st.session_state.result_df.empty:
         st.dataframe(st.session_state.result_df, use_container_width=True)
     else:
-        st.warning("Aucun résultat à afficher. Cliquez sur **Exécuter l'analyse**.")
+        st.info("Cliquez sur **Démarrer l'analyse descriptive** pour afficher les résultats.")
         st.stop()
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- 5️⃣ Graphiques descriptifs (seulement variables sélectionnées) ---
+    # --- 5️⃣ Graphiques descriptifs (variables sélectionnées uniquement) ---
     st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
     st.markdown("### 📉 Visualisations des variables sélectionnées")
 
     output_folder = "plots"
     os.makedirs(output_folder, exist_ok=True)
 
-    plot_descriptive(df[explicatives], types_df[types_df["variable"].isin(explicatives)], output_folder=output_folder)
+    # 🔧 On passe la variable de regroupement pour tracer les relations entre variables
+    plot_descriptive(
+        df=df,
+        types_df=types_df[types_df["variable"].isin(explicatives)],
+        output_folder=output_folder,
+        selected_vars=explicatives,
+        group_var=group_var
+    )
 
     plot_files = sorted([f for f in os.listdir(output_folder) if f.endswith(".png")])
     if not plot_files:
-        st.warning("Aucun graphique généré.")
+        st.warning("Aucun graphique généré pour les variables sélectionnées.")
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
+    # --- Navigation entre les graphiques ---
     if "plot_index" not in st.session_state:
         st.session_state.plot_index = 0
 
