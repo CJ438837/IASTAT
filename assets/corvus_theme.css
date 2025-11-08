@@ -28,10 +28,17 @@ p, span, div {
     color: var(--corvus-dark) !important;
 }
 
-/* BUTTONS */
-div.stButton > button, .stButton button, button[kind="primary"] {
+/* ============================
+   BUTTONS — Force white text
+   ============================ */
+
+/* Boutons par défaut */
+div.stButton > button,
+.stButton button,
+button[kind="primary"],
+button[data-testid="baseButton-primary"] {
     background-color: var(--corvus-dark) !important;
-    color: var(--corvus-white) !important; /* Texte blanc par défaut */
+    color: var(--corvus-white) !important; /* texte blanc par défaut */
     border-radius: 10px !important;
     padding: 0.6em 1.2em !important;
     border: none !important;
@@ -42,12 +49,28 @@ div.stButton > button, .stButton button, button[kind="primary"] {
     box-shadow: none !important;
 }
 
-/* Hover effect */
-div.stButton > button:hover, .stButton button:hover, button[kind="primary"]:hover {
+/* Boutons au survol */
+div.stButton > button:hover,
+.stButton button:hover,
+button[kind="primary"]:hover,
+button[data-testid="baseButton-primary"]:hover {
     background-color: var(--corvus-accent) !important;
-    color: var(--corvus-dark) !important; /* Texte foncé au survol */
+    color: var(--corvus-dark) !important; /* texte foncé au survol */
     transform: scale(1.04) !important;
 }
+
+/* Boutons actifs (cliquer) */
+div.stButton > button:active,
+.stButton button:active,
+button[kind="primary"]:active,
+button[data-testid="baseButton-primary"]:active {
+    background-color: #007bb8 !important;
+    color: var(--corvus-white) !important;
+}
+
+/* ============================
+   OTHER ELEMENTS
+   ============================ */
 
 /* Cards */
 div[data-testid="stExpander"] {
@@ -58,7 +81,7 @@ div[data-testid="stExpander"] {
 }
 
 /* Sidebar */
-section[data-testid="stSidebar"], .css-1d391kg, .css-1v0mbdj {
+section[data-testid="stSidebar"] {
     background-color: var(--corvus-dark) !important;
     color: var(--corvus-white) !important;
 }
