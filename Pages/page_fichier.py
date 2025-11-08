@@ -103,6 +103,7 @@ def app():
         col1, col2, col3 = st.columns([1,2,1])
         with col2:
             if st.button("➡️ Passer à la page Variables", use_container_width=True):
-                st.session_state.page = "Variables"
+               st.session_state.target_page = "Variables"
                
+
 
