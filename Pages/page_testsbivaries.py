@@ -23,7 +23,7 @@ def app():
     st.success("✅ Données et analyses de distribution prêtes.")
 
     # --- 2️⃣ Sélection des variables ---
-    st.subheader("Sélection des variables à comparer")
+    st.subheader("🎯 Sélection des variables à comparer")
 
     col1, col2 = st.columns(2)
     with col1:
@@ -58,7 +58,6 @@ def app():
     if st.button("🧪 Démarrer le test"):
         with st.spinner("Exécution du test... ⏳"):
             try:
-                # Exécution du module d'analyse bivariée
                 summary_df, details = propose_tests_bivaries(
                     types_df=types_df,
                     distribution_df=distribution_df,
@@ -66,7 +65,6 @@ def app():
                     default_apparie=apparie
                 )
 
-                # Clé spécifique à la paire
                 key = f"{var1}__{var2}"
                 if key not in details:
                     st.warning("Aucun résultat trouvé pour cette paire de variables.")
@@ -95,4 +93,14 @@ def app():
             except Exception as e:
                 st.error(f"❌ Erreur pendant l'exécution du test : {e}")
 
-
+    # --- 5️⃣ Navigation entre pages ---
+    st.markdown("---")
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col1:
+        if st.button("⬅️ Page précédente : Distribution"):
+            st.session_state["current_page"] = "Distribution"
+            st.rerun()
+    with col3:
+        if st.button("➡️ Page suivante : Tests multivariés"):
+            st.session_state["current_page"] = "Tests multivariés"
+            st.rerun()
