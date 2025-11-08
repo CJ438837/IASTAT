@@ -1,4 +1,4 @@
-# Pages/2_Variables.py
+riptive# Pages/2_Variables.py
 import streamlit as st
 import pandas as pd
 from modules.IA_STAT_typevariable_251125 import detect_variable_types
