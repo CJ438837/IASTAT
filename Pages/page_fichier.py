@@ -1,17 +1,18 @@
 import streamlit as st
-
-def app():
-    st.header("Fichier")
-    st.write("Définissons ton étude")
-
-import streamlit as st
 import pandas as pd
 import re
 from Bio import Entrez
 from io import BytesIO
 
-# --- Page Fichier ---
 def app():
+    # --- 🌙 Thème Corvus ---
+    try:
+        with open("assets/corvus_theme.css") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    except Exception as e:
+        st.warning(f"Impossible de charger le thème Corvus : {e}")
+
+    # --- 📂 Page Fichier ---
     st.header("📁 Importer le fichier pour l'étude")
     
     # --- 1️⃣ Upload du fichier ---
@@ -32,9 +33,9 @@ def app():
             st.error(f"Erreur lors de la lecture du fichier : {e}")
             return
         
-        # --- 2️⃣ Affichage du tableau ---
+        # --- 2️⃣ Aperçu des données ---
         st.subheader("Aperçu des données")
-        st.dataframe(df.head(10))
+        st.dataframe(df.head(10), use_container_width=True)
 
         # --- 3️⃣ Sélection des colonnes ---
         st.subheader("Sélection des colonnes à inclure dans l'étude")
@@ -68,8 +69,8 @@ def app():
             st.write(f"**Requête PubMed :** {query}")
 
             # --- 6️⃣ Recherche PubMed ---
-            if st.button("Rechercher articles PubMed"):
-                Entrez.email = "ton.email@example.com"  # à remplacer par ton email
+            if st.button("🔍 Rechercher articles PubMed"):
+                Entrez.email = "ton.email@example.com"  # à remplacer par ton adresse
                 try:
                     handle = Entrez.esearch(db="pubmed", term=query, retmax=10, sort="relevance")
                     record = Entrez.read(handle)
@@ -85,7 +86,5 @@ def app():
                 except Exception as e:
                     st.error(f"Erreur lors de la recherche PubMed : {e}")
         
-        # --- 7️⃣ Récupérer le dataframe sélectionné pour le reste de l'app ---
+        # --- 7️⃣ Récupération du DataFrame sélectionné ---
         st.session_state['df_selected'] = df_selected
-
-
