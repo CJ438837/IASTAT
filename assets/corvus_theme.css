@@ -31,18 +31,20 @@ p, span, div {
 /* Buttons */
 .stButton button {
     background-color: var(--corvus-dark) !important;
-    color: var(--corvus-white) !important;
+    color: var(--corvus-white) !important; /* Texte blanc par défaut */
     border-radius: 10px !important;
     padding: 0.6em 1.2em !important;
     border: none !important;
     font-size: 1.1em !important;
-    transition: 0.2s ease-in-out !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.25s ease-in-out !important;
 }
 
 .stButton button:hover {
     background-color: var(--corvus-accent) !important;
-    color: var(--corvus-dark) !important;
-    transform: scale(1.03);
+    color: var(--corvus-dark) !important; /* Texte foncé au survol */
+    transform: scale(1.04);
 }
 
 /* Cards */
@@ -50,16 +52,12 @@ div[data-testid="stExpander"] {
     background-color: var(--corvus-white) !important;
     border: 1px solid #dce1e3 !important;
     border-radius: 10px !important;
+    padding: 1rem !important;
 }
 
 /* Sidebar */
 .sidebar .sidebar-content {
     background-color: var(--corvus-dark) !important;
-}
-
-.css-1d391kg, .css-1v0mbdj {
-    background-color: var(--corvus-dark) !important;
-    color: var(--corvus-white) !important;
 }
 
 /* Tables */
