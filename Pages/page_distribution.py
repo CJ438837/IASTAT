@@ -120,6 +120,6 @@ def app():
     st.markdown("---")
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("⬅️ Retour à l'analyse descriptive", use_container_width=True):
-            st.session_state.page = "Analyse descriptive"
-            st.experimental_rerun()
+        if st.button("➡️ Passer à la page Tests bivariés", use_container_width=True):
+               st.session_state.target_page = "Tests bivariés"
+
