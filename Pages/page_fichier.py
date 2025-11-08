@@ -97,3 +97,11 @@ def app():
         
         # --- 7️⃣ Sauvegarde du DataFrame sélectionné ---
         st.session_state['df_selected'] = df_selected
+
+        # --- 8️⃣ Bouton de navigation ---
+        st.markdown("---")
+        col1, col2, col3 = st.columns([1,2,1])
+        with col2:
+            if st.button("➡️ Passer à la page Variables", use_container_width=True):
+                st.session_state.page = "Variables"
+                st.experimental_rerun()
