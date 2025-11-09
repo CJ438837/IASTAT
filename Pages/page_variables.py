@@ -25,10 +25,10 @@ def app():
     # --- 🚀 Détection automatique ---
     with st.container():
         st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
-        st.markdown("### 🔍 Détection automatique")
+        st.markdown("### 📈 Détection automatique")
         st.markdown("<p class='corvus-text'>Cliquez pour laisser l'IA identifier le type de chaque variable.</p>", unsafe_allow_html=True)
         
-        if st.button("🤖 Détecter automatiquement les types de variables", use_container_width=True):
+        if st.button("📈 Détecter les types de variables", use_container_width=True):
             with st.spinner("Analyse des colonnes en cours..."):
                 types_results, cleaned_data = detect_variable_types(df_selected)
                 df_types = types_results['data'] if 'data' in types_results else list(types_results.values())[0]
