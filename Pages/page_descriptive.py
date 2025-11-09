@@ -153,6 +153,9 @@ def app():
 
     # --- ➡️ Navigation ---
     st.markdown("---")
-    if st.button("➡️ Passer à la page Distribution", use_container_width=True):
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("➡️ Passer à la page Distribution", use_container_width=True):
             st.session_state.target_page = "Distribution"
+
 
