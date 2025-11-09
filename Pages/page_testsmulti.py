@@ -14,7 +14,7 @@ def app():
         st.warning(f"Impossible de charger le thème Corvus : {e}")
 
     # --- 🧠 En-tête ---
-    st.markdown("<h1 class='corvus-title'>🧮 Tests Multivariés Avancés</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 class='corvus-title'> Tests Multivariés Avancés</h1>", unsafe_allow_html=True)
     st.markdown("<p class='corvus-subtitle'>Analysez les relations complexes entre plusieurs variables simultanément.</p>", unsafe_allow_html=True)
 
     # --- 1️⃣ Vérification des prérequis ---
