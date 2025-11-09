@@ -99,7 +99,7 @@ def app():
                     # Interprétation automatique si disponible
                     if res.get("interpretation"):
                         st.markdown(
-                            f"<div class='corvus-interpretation'><b>🧠 Interprétation :</b> {res['interpretation']}</div>",
+                            f"<div class='corvus-interpretation'><b> Interprétation :</b> {res['interpretation']}</div>",
                             unsafe_allow_html=True
                         )
 
