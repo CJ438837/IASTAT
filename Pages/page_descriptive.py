@@ -47,7 +47,7 @@ def app():
 
     # --- 3️⃣ Lancer l'analyse ---
     st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
-    st.markdown("### 🚀 Lancer l'analyse descriptive")
+    st.markdown("### 📈 Lancer l'analyse descriptive")
 
     run_analysis = st.button("📈 Démarrer l'analyse descriptive", use_container_width=True)
 
@@ -157,6 +157,7 @@ def app():
     with col2:
         if st.button("➡️ Passer à la page Distribution", use_container_width=True):
             st.session_state.target_page = "Distribution"
+
 
 
 
