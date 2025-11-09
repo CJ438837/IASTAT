@@ -3,7 +3,7 @@ import pandas as pd
 from modules.IA_STAT_testbivaries import propose_tests_bivaries
 
 def app():
-    st.title("📊 Analyse bivariée")
+    st.title(" Analyse bivariée")
 
     # --- 1️⃣ Vérifications préalables ---
     if "df_selected" not in st.session_state:
@@ -99,4 +99,5 @@ def app():
     with col2:
         if st.button("➡️ Page suivante : Tests multivariés"):
             st.session_state.target_page = "Tests multivariés"
+
 
