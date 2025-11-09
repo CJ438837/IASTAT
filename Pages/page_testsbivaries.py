@@ -55,7 +55,7 @@ def app():
         st.info("Un test du Chi² ou de Fisher sera utilisé selon la taille de la table.")
 
     # --- 4️⃣ Lancement du test ---
-    if st.button("🧪 Démarrer le test"):
+    if st.button("📈 Démarrer le test"):
         with st.spinner("Exécution du test... ⏳"):
             try:
                 summary_df, details = propose_tests_bivaries(
@@ -99,5 +99,6 @@ def app():
     with col2:
         if st.button("➡️ Page suivante : Tests multivariés"):
             st.session_state.target_page = "Tests multivariés"
+
 
 
