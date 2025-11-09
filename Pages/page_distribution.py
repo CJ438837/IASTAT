@@ -11,7 +11,7 @@ def app():
         st.warning(f"Impossible de charger le thème Corvus : {e}")
 
     # --- 🧠 En-tête ---
-    st.markdown("<h1 class='corvus-title'>📈 Analyse de Distribution</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 class='corvus-title'>Analyse de Distribution</h1>", unsafe_allow_html=True)
     st.markdown("<p class='corvus-subtitle'>Étudiez la forme et la normalité de vos variables numériques à l’aide de tests statistiques et de visualisations interactives.</p>", unsafe_allow_html=True)
 
     # --- 1️⃣ Vérification des prérequis ---
@@ -122,4 +122,5 @@ def app():
     with col2:
         if st.button("➡️ Passer à la page Tests bivariés", use_container_width=True):
                st.session_state.target_page = "Tests bivariés"
+
 
