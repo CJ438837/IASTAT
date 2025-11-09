@@ -64,9 +64,9 @@ def app():
 
     # --- 4️⃣ Lancer les tests ---
     st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
-    st.markdown("### 🚀 Lancer les tests multivariés")
+    st.markdown("### 📈 Lancer les tests multivariés")
 
-    if st.button("🧠 Démarrer l'analyse multivariée", use_container_width=True):
+    if st.button("📈 Démarrer l'analyse multivariée", use_container_width=True):
         with st.spinner("Analyse en cours..."):
             try:
                 results = propose_tests_multivariés(
