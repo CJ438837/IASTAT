@@ -80,6 +80,7 @@ def app():
                     st.divider()
                     st.subheader(f"🧩 {res.get('test', 'Test inconnu')}")
 
+                    # Gestion des erreurs
                     if "error" in res:
                         st.error(f"❌ Erreur : {res['error']}")
                         continue
@@ -87,15 +88,22 @@ def app():
                         st.warning(res["message"])
                         continue
 
+                    # Résultats tabulaires
                     if isinstance(res.get("result_df"), pd.DataFrame) and not res["result_df"].empty:
                         st.dataframe(res["result_df"], use_container_width=True)
 
+                    # Graphique associé
                     if res.get("fig") is not None:
                         st.pyplot(res["fig"])
+
+                    # Interprétation automatique si disponible
+                    if res.get("interpretation"):
+                        st.markdown(
+                            f"<div class='corvus-interpretation'><b>🧠 Interprétation :</b> {res['interpretation']}</div>",
+                            unsafe_allow_html=True
+                        )
 
             except Exception as e:
                 st.error(f"❌ Une erreur est survenue pendant l'exécution : {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
-
-   
