@@ -13,7 +13,7 @@ def app():
         st.warning(f"Impossible de charger le thème Corvus : {e}")
 
     # --- 📂 Page Fichier ---
-    st.header("📁 Import your dataset for analysis")
+    st.header("Import your dataset for analysis")
 
     # --- 1️⃣ Upload du fichier ---
     uploaded_file = st.file_uploader(
@@ -105,5 +105,6 @@ def app():
             if st.button("➡️ Passer à la page Variables", use_container_width=True):
                st.session_state.target_page = "Variables"
                
+
 
 
