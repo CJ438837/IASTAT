@@ -96,10 +96,7 @@ def app():
     # --- 5️⃣ Navigation entre pages ---
     st.markdown("---")
     col1, col2, col3 = st.columns([1, 2, 1])
-    with col1:
-        if st.button("⬅️ Page précédente : Distribution"):
-            st.session_state["current_page"] = "Distribution"
-            st.rerun()
-    with col3:
+    with col2:
         if st.button("➡️ Page suivante : Tests multivariés"):
             st.session_state.target_page = "Tests multivariés"
+
