@@ -12,7 +12,7 @@ def app():
         st.warning(f"Impossible de charger le thème Corvus : {e}")
 
     # --- 🧠 En-tête ---
-    st.markdown("<h1 class='corvus-title'>🧩 Détection des types de variables</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 class='corvus-title'> Détection des types de variables</h1>", unsafe_allow_html=True)
     st.markdown("<p class='corvus-subtitle'>Identifiez automatiquement la nature de vos variables avant analyse.</p>", unsafe_allow_html=True)
 
     # --- 📦 Vérification des données importées ---
