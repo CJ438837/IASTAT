@@ -14,8 +14,9 @@ def app():
     """)
 
     # Bouton de redirection
-    if st.button("🚀 Démarrer mon analyse"):
+    if st.button("📈 Démarrer mon analyse"):
         st.session_state.target_page = "Fichier"
 
     st.markdown("---")
     st.markdown("© 2025 Corvus Analytics - Tous droits réservés")
+
