@@ -3,17 +3,26 @@ import pandas as pd
 from modules.IA_STAT_testbivaries import propose_tests_bivaries
 
 def app():
-    st.title(" Analyse bivariée")
+    # --- 🎨 Thème global ---
+    try:
+        with open("assets/corvus_theme.css") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    except Exception:
+        pass
+
+    # --- 🧠 En-tête ---
+    st.markdown("<h1 class='corvus-title'>Analyse bivariée</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='corvus-subtitle'>Explorez la relation entre deux variables à la fois.</p>", unsafe_allow_html=True)
 
     # --- 1️⃣ Vérifications préalables ---
     if "df_selected" not in st.session_state:
-        st.warning("Veuillez d'abord importer un fichier dans la page Fichier.")
+        st.warning("⚠️ Veuillez d'abord importer un fichier dans la page **Fichier**.")
         st.stop()
     if "types_df" not in st.session_state:
-        st.warning("Veuillez d'abord détecter les types de variables dans la page Variables.")
+        st.warning("⚠️ Veuillez d'abord détecter les types de variables dans la page **Variables**.")
         st.stop()
     if "distribution_df" not in st.session_state:
-        st.warning("Veuillez d'abord analyser la distribution des données dans la page Distribution.")
+        st.warning("⚠️ Veuillez d'abord analyser la distribution des données dans la page **Distribution**.")
         st.stop()
 
     df = st.session_state["df_selected"].copy()
@@ -23,27 +32,39 @@ def app():
     st.success("✅ Données et analyses de distribution prêtes.")
 
     # --- 2️⃣ Sélection des variables ---
+    st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
     st.subheader("🎯 Sélection des variables à comparer")
 
     col1, col2 = st.columns(2)
     with col1:
         var1 = st.selectbox("Variable dépendante (Y)", df.columns)
     with col2:
-        var2 = st.selectbox("Variable explicative (X)", df.columns, index=min(1, len(df.columns) - 1))
+        var2 = st.selectbox("Variable explicative (X)", [c for c in df.columns if c != var1])
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
     if var1 == var2:
         st.warning("⚠️ Sélectionnez deux variables différentes.")
         st.stop()
 
     # Détection automatique du type
-    type1 = types_df.loc[types_df["variable"] == var1, "type"].values[0]
-    type2 = types_df.loc[types_df["variable"] == var2, "type"].values[0]
+    def normalize_type(t):
+        if t.lower() in ["bool", "boolean", "binaire"]:
+            return "binaire"
+        return t
+
+    type1 = normalize_type(types_df.loc[types_df["variable"] == var1, "type"].values[0])
+    type2 = normalize_type(types_df.loc[types_df["variable"] == var2, "type"].values[0])
+
     st.markdown(f"**Types détectés :** `{var1}` → {type1}, `{var2}` → {type2}")
 
     # --- 3️⃣ Options de test ---
     apparie = False
+    st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
+    st.subheader("⚙️ Options d'analyse")
+
     if type1 == "numérique" and type2 == "numérique":
-        st.info("Un test de corrélation (Pearson, Spearman ou Kendall) sera appliqué selon la distribution.")
+        st.info("💡 Un test de corrélation (Pearson, Spearman ou Kendall) sera appliqué selon la distribution.")
     elif (type1 == "numérique" and type2 in ["catégorielle", "binaire"]) or (type2 == "numérique" and type1 in ["catégorielle", "binaire"]):
         apparie = st.radio(
             "Les deux groupes sont-ils appariés ?",
@@ -52,11 +73,16 @@ def app():
             horizontal=True
         ) == "Oui"
     elif type1 in ["catégorielle", "binaire"] and type2 in ["catégorielle", "binaire"]:
-        st.info("Un test du Chi² ou de Fisher sera utilisé selon la taille de la table.")
+        st.info("💡 Un test du Chi² ou de Fisher sera utilisé selon la taille de la table de contingence.")
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
     # --- 4️⃣ Lancement du test ---
-    if st.button("📈 Démarrer le test"):
-        with st.spinner("Exécution du test... ⏳"):
+    st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
+    st.subheader("📈 Lancer le test bivarié")
+
+    if st.button("📊 Démarrer le test", use_container_width=True, type="primary"):
+        with st.spinner("Analyse en cours... ⏳"):
             try:
                 summary_df, details = propose_tests_bivaries(
                     types_df=types_df,
@@ -80,25 +106,32 @@ def app():
                     "p-value": result.get("p_value"),
                     "Effect size": result.get("effect_size", None),
                     "Cramer's V": result.get("cramers_v", None)
-                }]))
+                }]), use_container_width=True)
 
                 # --- Graphique associé ---
                 st.subheader("📊 Visualisation du résultat")
                 plot_path = result.get("plot") or result.get("plot_boxplot")
                 if plot_path:
-                    st.image(plot_path, use_column_width=True)
+                    st.image(plot_path, use_container_width=True)
                 else:
                     st.info("Aucun graphique disponible pour ce test.")
+
+                # --- Analyse des résidus si disponible ---
+                if "residus_plot" in result and result["residus_plot"]:
+                    st.subheader("📉 Analyse des résidus")
+                    st.image(result["residus_plot"], use_container_width=True)
+
+                if "residus_summary" in result and result["residus_summary"] is not None:
+                    st.dataframe(result["residus_summary"], use_container_width=True)
 
             except Exception as e:
                 st.error(f"❌ Erreur pendant l'exécution du test : {e}")
 
+    st.markdown("</div>", unsafe_allow_html=True)
+
     # --- 5️⃣ Navigation entre pages ---
-    st.markdown("---")
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        if st.button("➡️ Page suivante : Tests multivariés"):
+    st.markdown("<hr>", unsafe_allow_html=True)
+    nav_col1, nav_col2, nav_col3 = st.columns([1, 2, 1])
+    with nav_col2:
+        if st.button("➡️ Page suivante : Tests multivariés", use_container_width=True):
             st.session_state.target_page = "Tests multivariés"
-
-
-
