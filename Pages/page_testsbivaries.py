@@ -49,7 +49,7 @@ def app():
 
     # Détection automatique du type
     def normalize_type(t):
-        if t.lower() in ["bool", "boolean", "binaire"]:
+        if isinstance(t, str) and t.lower() in ["bool", "boolean", "binaire"]:
             return "binaire"
         return t
 
@@ -84,12 +84,23 @@ def app():
     if st.button("📊 Démarrer le test", use_container_width=True, type="primary"):
         with st.spinner("Analyse en cours... ⏳"):
             try:
-                summary_df, details = propose_tests_bivaries(
+                # --- Compatibilité automatique selon le format du retour ---
+                result = propose_tests_bivaries(
                     types_df=types_df,
                     distribution_df=distribution_df,
                     df=df,
                     default_apparie=apparie
                 )
+
+                # Certains modules renvoient (summary_df, details)
+                if isinstance(result, tuple) and len(result) == 2:
+                    summary_df, details = result
+                # D'autres renvoient un seul dict {summary_df, details}
+                elif isinstance(result, dict):
+                    summary_df = result.get("summary_df", pd.DataFrame())
+                    details = result.get("details", {})
+                else:
+                    raise ValueError("Format de retour inattendu depuis propose_tests_bivaries().")
 
                 key = f"{var1}__{var2}"
                 if key not in details:
@@ -116,7 +127,7 @@ def app():
                 else:
                     st.info("Aucun graphique disponible pour ce test.")
 
-                # --- Analyse des résidus si disponible ---
+                # --- Analyse des résidus ---
                 if "residus_plot" in result and result["residus_plot"]:
                     st.subheader("📉 Analyse des résidus")
                     st.image(result["residus_plot"], use_container_width=True)
