@@ -13,7 +13,11 @@ def app():
 
     # --- 🧠 En-tête ---
     st.markdown("<h1 class='corvus-title'> Détection des types de variables</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='corvus-subtitle'>Identifiez automatiquement la nature de vos variables avant analyse.</p>", unsafe_allow_html=True)
+    st.markdown("""
+    **Le but est de d'identifier les types de variables qui composent votre fichier.**
+    **Cette étape est primordiale pour la bonne réalisation de la suite de l'analyse !**
+    **N'hésitez pas à modifier les types de variables proposées si nécessaire.**
+    """)
 
     # --- 📦 Vérification des données importées ---
     if "df_selected" not in st.session_state:
@@ -26,7 +30,7 @@ def app():
     with st.container():
         st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
         st.markdown("### 📈 Détection automatique")
-        st.markdown("<p class='corvus-text'>Cliquez pour laisser l'IA identifier le type de chaque variable.</p>", unsafe_allow_html=True)
+        
         
         if st.button("📈 Détecter les types de variables", use_container_width=True):
             with st.spinner("Analyse des colonnes en cours..."):
