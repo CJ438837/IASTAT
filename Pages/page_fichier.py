@@ -12,13 +12,14 @@ def app():
     except Exception as e:
         st.warning(f"Impossible de charger le thème Corvus : {e}")
 
+    # --- 📂 Page Fichier ---
+    st.header("Importez votre jeu de données pour analyse")
+
     st.markdown("""
     **Téléchargez votre fichier afin de visualiser les données, séléctionner les variables utiles**
     **et trouver des études similaires à la vôtre pour vous inspirer**
     """)
 
-    # --- 📂 Page Fichier ---
-    st.header("Importez votre jeu de données pour analyse")
 
     # --- 1️⃣ Upload du fichier ---
     uploaded_file = st.file_uploader(
@@ -110,6 +111,7 @@ def app():
             if st.button("➡️ Passer à la page Variables", use_container_width=True):
                st.session_state.target_page = "Variables"
                
+
 
 
 
