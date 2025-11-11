@@ -21,6 +21,7 @@ pages = [
     "Distribution",
     "Tests bivariés",
     "Tests multivariés"
+    "Contact"
 ]
 
 # Le radio contrôle la navigation manuelle
@@ -56,3 +57,8 @@ elif st.session_state.target_page == "Tests bivariés":
 elif st.session_state.target_page == "Tests multivariés":
     from Pages import page_testsmulti
     page_testsmulti.app()
+elif st.session_state.target_page == "Contact":
+    from Pages import page_contact
+    page_contact.app()
+
+
