@@ -15,7 +15,10 @@ def app():
 
     # --- 🧠 En-tête ---
     st.markdown("<h1 class='corvus-title'>Analyse descriptive</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='corvus-subtitle'>Explorez vos variables avec des statistiques et visualisations interactives.</p>", unsafe_allow_html=True)
+    st.markdown("""
+    **Rentrons dans le concret ! L'analyse descriptive, voici la première vraie analyse.**
+    **Voyons la "carte" d'identité de vos variables et vos premières illustrations!**
+    """)
 
     # --- 1️⃣ Vérification des prérequis ---
     if "df_selected" not in st.session_state:
@@ -157,6 +160,7 @@ def app():
     with col2:
         if st.button("➡️ Passer à la page Distribution", use_container_width=True):
             st.session_state.target_page = "Distribution"
+
 
 
 
