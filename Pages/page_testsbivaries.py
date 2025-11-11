@@ -9,7 +9,12 @@ plt.style.use("seaborn-v0_8-muted")
 
 
 def app():
-    st.title("📊 Tests statistiques bivariés interactifs")
+    st.title("Tests statistiques bivariés interactifs")
+    st.markdown("""
+    **Etudions l'impact des variables les une sur les autres.**
+    **Ici l'étude se fait avec une variable dépendante et une variable explicative.**
+    **Voyons ce qu'il en ressort avec les résultats des tests et des illustrations graphiques**
+    """)
 
     # --- Vérifications préalables ---
     if "df_selected" not in st.session_state:
@@ -172,5 +177,6 @@ def app():
     with col2:
         if st.button("➡️ Page suivante : Tests multivariés"):
             st.session_state.target_page = "Tests multivariés"
+
 
 
