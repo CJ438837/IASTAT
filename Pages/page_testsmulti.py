@@ -15,7 +15,10 @@ def app():
 
     # --- 🧠 En-tête ---
     st.markdown("<h1 class='corvus-title'> Tests Multivariés Avancés</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='corvus-subtitle'>Analysez les relations complexes entre plusieurs variables simultanément.</p>", unsafe_allow_html=True)
+    st.markdown("""
+    **Passons maintenant aux interactions plus complexes !**
+    **Ici l'étude se fait avec une variable dépendante et plusieures variables explicatives, à la différence des tests bivariés.**
+    """)
 
     # --- 1️⃣ Vérification des prérequis ---
     if "df_selected" not in st.session_state or st.session_state["df_selected"] is None:
