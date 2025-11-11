@@ -13,11 +13,11 @@ def app():
         st.warning(f"Impossible de charger le thème Corvus : {e}")
 
     # --- 📂 Page Fichier ---
-    st.header("Import your dataset for analysis")
+    st.header("Importez votre jeu de données pour analyse")
 
     # --- 1️⃣ Upload du fichier ---
     uploaded_file = st.file_uploader(
-        "Choose your Excel or CSV file", 
+        "Choisissez votre fichier Excel ou CSV.", 
         type=['xlsx', 'xls', 'csv']
     )
 
@@ -48,7 +48,7 @@ def app():
         st.write(f"Selected columns ({len(selected_cols)}): {selected_cols}")
 
         # --- 4️⃣ Description de l'étude ---
-        st.subheader("Describe your study in a few words (in English)")
+        st.subheader("Décrivez votre étude en quelques mots (en anglais)")
         description = st.text_area(
             "Example: Study of the effect of age and weight on blood pressure...",
             placeholder="Enter a short English description..."
@@ -105,6 +105,7 @@ def app():
             if st.button("➡️ Passer à la page Variables", use_container_width=True):
                st.session_state.target_page = "Variables"
                
+
 
 
 
