@@ -123,9 +123,7 @@ def app():
                 st.markdown("**Normalité par groupe :**")
                 st.json(test_detail["normality_groups"])
 
-            if "levene_stat" in test_detail:
-                st.markdown(f"**Levene** stat: {test_detail.get('levene_stat')} — p: {test_detail.get('levene_p')} — equal_var: {test_detail.get('equal_var')}")
-
+        
             # --- 3) Affichage graphique associé (boxplot / heatmap / scatter) ---
             st.subheader("📊 Graphique associé")
             plot_path = test_detail.get("plot") or test_detail.get("plot_boxplot") or test_detail.get("plot_boxplot_png") or test_detail.get("plot_png")
@@ -174,4 +172,5 @@ def app():
     with col2:
         if st.button("➡️ Page suivante : Tests multivariés"):
             st.session_state.target_page = "Tests multivariés"
+
 
