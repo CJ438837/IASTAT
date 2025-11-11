@@ -9,8 +9,8 @@ def app():
         st.warning(f"Logo non trouvé : {e}")
 
     st.markdown("""
-    **Une question sur l'utilisation, l'interprétation des résultats ou un bug à remonter ?**
-    **N'hésitez pas à me contacter par mail à l'adresse suivante : corvus.analysis@outlook.com ?**
+    **Une question sur l'utilisation, l'interprétation des résultats ou un bug ?**
+    **N'hésitez pas à me contacter par mail à l'adresse suivante : corvus.analysis@outlook.com**
     """)
 
     # Bouton de redirection
