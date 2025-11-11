@@ -1,3 +1,5 @@
+# Pages/page_testsbivaries.py
+import os
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -5,27 +7,19 @@ from modules.IA_STAT_testbivaries import propose_tests_bivaries
 
 plt.style.use("seaborn-v0_8-muted")
 
+
 def app():
-    # --- 🎨 Thème Corvus (si présent) ---
-    try:
-        with open("assets/corvus_theme.css") as f:
-            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-    except Exception as e:
-        st.warning(f"Impossible de charger le thème Corvus : {e}")
+    st.title("📊 Tests statistiques bivariés interactifs")
 
-    # --- 🧠 En-tête ---
-    st.markdown("<h1 class='corvus-title'> Tests Bivariés</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='corvus-subtitle'>Analysez les relations entre deux variables selon leur nature.</p>", unsafe_allow_html=True)
-
-    # --- 1️⃣ Vérifications préalables ---
+    # --- Vérifications préalables ---
     if "df_selected" not in st.session_state:
-        st.warning("⚠️ Veuillez d'abord importer un fichier dans la page **Fichier**.")
+        st.warning("Veuillez d'abord importer un fichier dans la page Fichier.")
         st.stop()
     if "types_df" not in st.session_state:
-        st.warning("⚠️ Veuillez d'abord détecter les types de variables dans la page **Variables**.")
+        st.warning("Veuillez d'abord détecter les types de variables dans la page Variables.")
         st.stop()
     if "distribution_df" not in st.session_state:
-        st.warning("⚠️ Veuillez d'abord analyser la distribution des données dans la page **Distribution**.")
+        st.warning("Veuillez d'abord analyser la distribution des données dans la page Distribution.")
         st.stop()
 
     df = st.session_state["df_selected"].copy()
@@ -34,85 +28,151 @@ def app():
 
     st.success("✅ Données et analyses de distribution prêtes.")
 
-    # --- 2️⃣ Sélection des variables ---
-    st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
-    st.markdown("### 🎯 Sélection des variables à comparer")
+    # --- Sélection d'une paire de variables ---
+    st.header("🎯 Sélection des variables à comparer")
+    cols = df.columns.tolist()
 
     col1, col2 = st.columns(2)
     with col1:
-        var1 = st.selectbox("Variable dépendante (Y)", df.columns)
+        var1 = st.selectbox("Variable dépendante (Y)", cols)
     with col2:
-        var2 = st.selectbox("Variable explicative (X)", df.columns, index=min(1, len(df.columns) - 1))
+        var2 = st.selectbox("Variable explicative (X)", cols, index=min(1, len(cols) - 1))
 
     if var1 == var2:
-        st.warning("⚠️ Sélectionnez deux variables différentes.")
+        st.warning("⚠️ Veuillez sélectionner deux variables différentes.")
         st.stop()
 
-    # Détection automatique du type
-    type1 = types_df.loc[types_df["variable"] == var1, "type"].values[0]
-    type2 = types_df.loc[types_df["variable"] == var2, "type"].values[0]
-    st.markdown(f"**Types détectés :** `{var1}` → {type1}, `{var2}` → {type2}")
+    # --- Détection automatique du type (sécurité si variable non trouvée) ---
+    try:
+        type1 = types_df.loc[types_df["variable"] == var1, "type"].values[0]
+    except Exception:
+        st.error(f"Le type pour la variable `{var1}` n'a pas été trouvé dans types_df.")
+        st.stop()
+    try:
+        type2 = types_df.loc[types_df["variable"] == var2, "type"].values[0]
+    except Exception:
+        st.error(f"Le type pour la variable `{var2}` n'a pas été trouvé dans types_df.")
+        st.stop()
 
-    # --- 3️⃣ Options de test ---
+    st.markdown(f"**Types détectés :** `{var1}` → **{type1}**, `{var2}` → **{type2}**")
+
+    # --- Appariement si applicable ---
     apparie = False
-    if type1 == "numérique" and type2 == "numérique":
-        st.info("Un test de corrélation (Pearson, Spearman ou Kendall) sera appliqué selon la distribution.")
-    elif (type1 == "numérique" and type2 in ["catégorielle", "binaire"]) or (type2 == "numérique" and type1 in ["catégorielle", "binaire"]):
-        apparie = st.radio(
-            "Les deux groupes sont-ils appariés ?",
-            ["Non", "Oui"],
-            index=0,
-            horizontal=True
-        ) == "Oui"
-    elif type1 in ["catégorielle", "binaire"] and type2 in ["catégorielle", "binaire"]:
-        st.info("Un test du Chi² ou de Fisher sera utilisé selon la taille de la table.")
+    if (type1 == "numérique" and type2 in ["catégorielle", "binaire"]) or (type2 == "numérique" and type1 in ["catégorielle", "binaire"]):
+        apparie = st.radio("Les deux groupes sont-ils appariés ?", ["Non", "Oui"], index=0, horizontal=True) == "Oui"
+    elif type1 == "numérique" and type2 == "numérique":
+        st.info("Test de corrélation (Pearson/Spearman/Kendall) sera appliqué selon la distribution.")
+    else:
+        st.info("Chi² / Fisher seront considérés pour des variables catégorielles.")
 
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # --- 4️⃣ Lancement du test ---
-    st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
-    st.markdown("### 📈 Lancer les tests bivariés")
-
-    if st.button("📊 Démarrer l'analyse bivariée", use_container_width=True):
-        with st.spinner("Analyse en cours..."):
+    # --- Exécution du test (bouton) ---
+    if st.button("🧪 Exécuter le test sélectionné"):
+        with st.spinner("Exécution du test... ⏳"):
             try:
-                results = propose_tests_bivaries(
-                    df=df,
+                # --- APPEL inchangé de la fonction existante (signature actuelle) ---
+                summary_df, details = propose_tests_bivaries(
                     types_df=types_df,
                     distribution_df=distribution_df,
-                    var1=var1,
-                    var2=var2,
+                    df=df,
                     default_apparie=apparie
                 )
-
-                if not isinstance(results, list) or len(results) == 0:
-                    st.error("❌ Format inattendu : la fonction n'a pas renvoyé de résultats exploitables.")
-                    st.stop()
-
-                for res in results:
-                    st.divider()
-                    st.subheader(f"🧩 {res.get('test', 'Test inconnu')}")
-
-                    if "error" in res:
-                        st.error(f"❌ Erreur : {res['error']}")
-                        continue
-                    if "message" in res:
-                        st.warning(res["message"])
-                        continue
-
-                    if isinstance(res.get("result_df"), pd.DataFrame) and not res["result_df"].empty:
-                        st.dataframe(res["result_df"], use_container_width=True)
-
-                    if res.get("fig") is not None:
-                        st.pyplot(res["fig"])
-
+            except TypeError as te:
+                st.error(f"Erreur d'appel de propose_tests_bivaries(): {te}")
+                return
             except Exception as e:
-                st.error(f"❌ Une erreur est survenue pendant l'exécution : {e}")
+                st.error(f"Erreur lors de l'exécution des tests : {e}")
+                return
 
-    st.markdown("</div>", unsafe_allow_html=True)
+            # --- On récupère la clé correspondant à la paire choisie ---
+            key = f"{var1}__{var2}"
+            # function may use either order v1__v2 or v2__v1 depending on implementation;
+            # try both orders
+            if key not in details:
+                alt_key = f"{var2}__{var1}"
+                if alt_key in details:
+                    key = alt_key
 
-    # --- 5️⃣ Navigation entre pages ---
-    st.markdown("<hr>", unsafe_allow_html=True)
+            if key not in details:
+                st.warning("⚠️ Test non trouvé dans les résultats générés pour cette paire de variables.")
+                st.write("Clés disponibles :", list(details.keys())[:20])
+                return
+
+            test_detail = details[key]
+
+            # --- 1) Affichage synthétique du résultat (tableau unique) ---
+            st.subheader("📋 Résumé du test")
+            # Compose a small dataframe summarizing the most useful fields
+            summary_record = {
+                "Test": test_detail.get("test", None),
+                "Statistique": test_detail.get("statistic", test_detail.get("stat", None)),
+                "p-value": test_detail.get("p_value", test_detail.get("p", None)),
+                "Effect size": test_detail.get("effect_size", test_detail.get("effect", None)),
+                "Cramers V": test_detail.get("cramers_v", None)
+            }
+            st.table(pd.DataFrame([summary_record]))
+
+            # --- 2) Afficher détails complémentaires si présents ---
+            st.subheader("🔎 Détails")
+            # Normality info if present
+            if "normality_var1" in test_detail or "normality_var2" in test_detail:
+                st.markdown("**Tests de normalité :**")
+                st.write(test_detail.get("normality_var1", "—"))
+                st.write(test_detail.get("normality_var2", "—"))
+
+            if "normality_groups" in test_detail:
+                st.markdown("**Normalité par groupe :**")
+                st.json(test_detail["normality_groups"])
+
+            if "levene_stat" in test_detail:
+                st.markdown(f"**Levene** stat: {test_detail.get('levene_stat')} — p: {test_detail.get('levene_p')} — equal_var: {test_detail.get('equal_var')}")
+
+            # --- 3) Affichage graphique associé (boxplot / heatmap / scatter) ---
+            st.subheader("📊 Graphique associé")
+            plot_path = test_detail.get("plot") or test_detail.get("plot_boxplot") or test_detail.get("plot_boxplot_png") or test_detail.get("plot_png")
+            if plot_path:
+                # If function saved a path to file
+                try:
+                    if isinstance(plot_path, (list, tuple)):
+                        # defensive: if it's a list, take first
+                        plot_path = plot_path[0]
+                    if os.path.exists(plot_path):
+                        st.image(plot_path, use_column_width=True)
+                    else:
+                        # maybe the function returned a Matplotlib figure object
+                        if hasattr(plot_path, "savefig"):
+                            st.pyplot(plot_path)
+                        else:
+                            st.write("Chemin de l'image non trouvé :", plot_path)
+                except Exception:
+                    # fallback: if 'fig' key exists and is a matplotlib Figure
+                    fig = test_detail.get("fig", None)
+                    if fig is not None:
+                        st.pyplot(fig)
+                    else:
+                        st.info("Aucun graphique disponible.")
+            else:
+                # try fig object directly
+                fig = test_detail.get("fig", None)
+                if fig is not None:
+                    st.pyplot(fig)
+                else:
+                    st.info("Aucun graphique disponible pour ce test.")
+
+            # --- 4) Affichage de la table de contingence si présente ---
+            if "contingency_table" in test_detail:
+                st.subheader("🧾 Table de contingence")
+                try:
+                    st.dataframe(test_detail["contingency_table"])
+                except Exception:
+                    st.write(test_detail["contingency_table"])
+
+            # --- 5) Affichage du résumé global (optionnel) ---
+            if st.checkbox("Afficher le résumé de tous les tests générés (pour debug)"):
+                st.subheader("Résumé de tous les tests (extrait)")
+                st.dataframe(summary_df.head(200))
+
+    # --- Navigation vers multivariés ---
+    st.markdown("---")
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if st.button("➡️ Page suivante : Tests multivariés"):
