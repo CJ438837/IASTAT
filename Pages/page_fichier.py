@@ -13,7 +13,8 @@ def app():
         st.warning(f"Impossible de charger le thème Corvus : {e}")
 
     st.markdown("""
-    **Téléchargez votre fichier afin de visualiser les données, séléctionner les variables utiles et trouver des études similaires à la vôtre pour vous inspirer**
+    **Téléchargez votre fichier afin de visualiser les données, séléctionner les variables utiles**
+    **et trouver des études similaires à la vôtre pour vous inspirer**
     """)
 
     # --- 📂 Page Fichier ---
@@ -109,6 +110,7 @@ def app():
             if st.button("➡️ Passer à la page Variables", use_container_width=True):
                st.session_state.target_page = "Variables"
                
+
 
 
 
