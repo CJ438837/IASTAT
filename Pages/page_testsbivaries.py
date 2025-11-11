@@ -1,19 +1,31 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
 from modules.IA_STAT_testbivaries import propose_tests_bivaries
 
+plt.style.use("seaborn-v0_8-muted")
+
 def app():
-    st.title(" Analyse bivariée")
+    # --- 🎨 Thème Corvus (si présent) ---
+    try:
+        with open("assets/corvus_theme.css") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    except Exception as e:
+        st.warning(f"Impossible de charger le thème Corvus : {e}")
+
+    # --- 🧠 En-tête ---
+    st.markdown("<h1 class='corvus-title'> Tests Bivariés</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='corvus-subtitle'>Analysez les relations entre deux variables selon leur nature.</p>", unsafe_allow_html=True)
 
     # --- 1️⃣ Vérifications préalables ---
     if "df_selected" not in st.session_state:
-        st.warning("Veuillez d'abord importer un fichier dans la page Fichier.")
+        st.warning("⚠️ Veuillez d'abord importer un fichier dans la page **Fichier**.")
         st.stop()
     if "types_df" not in st.session_state:
-        st.warning("Veuillez d'abord détecter les types de variables dans la page Variables.")
+        st.warning("⚠️ Veuillez d'abord détecter les types de variables dans la page **Variables**.")
         st.stop()
     if "distribution_df" not in st.session_state:
-        st.warning("Veuillez d'abord analyser la distribution des données dans la page Distribution.")
+        st.warning("⚠️ Veuillez d'abord analyser la distribution des données dans la page **Distribution**.")
         st.stop()
 
     df = st.session_state["df_selected"].copy()
@@ -23,7 +35,8 @@ def app():
     st.success("✅ Données et analyses de distribution prêtes.")
 
     # --- 2️⃣ Sélection des variables ---
-    st.subheader("🎯 Sélection des variables à comparer")
+    st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
+    st.markdown("### 🎯 Sélection des variables à comparer")
 
     col1, col2 = st.columns(2)
     with col1:
@@ -54,61 +67,52 @@ def app():
     elif type1 in ["catégorielle", "binaire"] and type2 in ["catégorielle", "binaire"]:
         st.info("Un test du Chi² ou de Fisher sera utilisé selon la taille de la table.")
 
+    st.markdown("</div>", unsafe_allow_html=True)
+
     # --- 4️⃣ Lancement du test ---
-    if st.button("📈 Démarrer le test"):
-        with st.spinner("Exécution du test... ⏳"):
+    st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
+    st.markdown("### 📈 Lancer les tests bivariés")
+
+    if st.button("📊 Démarrer l'analyse bivariée", use_container_width=True):
+        with st.spinner("Analyse en cours..."):
             try:
-                # On récupère les résultats sous forme flexible
-                output = propose_tests_bivaries(
+                results = propose_tests_bivaries(
+                    df=df,
                     types_df=types_df,
                     distribution_df=distribution_df,
-                    df=df,
+                    var1=var1,
+                    var2=var2,
                     default_apparie=apparie
                 )
 
-                # On s’adapte à tous les cas possibles
-                if isinstance(output, tuple) and len(output) == 2:
-                    summary_df, details = output
-                elif isinstance(output, dict) and "details" in output:
-                    summary_df = output.get("summary_df", pd.DataFrame())
-                    details = output["details"]
-                elif isinstance(output, dict):
-                    summary_df = pd.DataFrame(output)
-                    details = {}
-                else:
-                    st.error("❌ Format de retour inattendu depuis propose_tests_bivaries().")
+                if not isinstance(results, list) or len(results) == 0:
+                    st.error("❌ Format inattendu : la fonction n'a pas renvoyé de résultats exploitables.")
                     st.stop()
 
-                key = f"{var1}__{var2}"
-                if key not in details:
-                    st.warning("Aucun résultat trouvé pour cette paire de variables.")
-                    st.stop()
+                for res in results:
+                    st.divider()
+                    st.subheader(f"🧩 {res.get('test', 'Test inconnu')}")
 
-                result = details[key]
+                    if "error" in res:
+                        st.error(f"❌ Erreur : {res['error']}")
+                        continue
+                    if "message" in res:
+                        st.warning(res["message"])
+                        continue
 
-                # --- Résumé du test ---
-                st.subheader("📋 Résultats du test")
-                st.dataframe(pd.DataFrame([{
-                    "Test": result.get("test"),
-                    "Statistique": result.get("statistic"),
-                    "p-value": result.get("p_value"),
-                    "Effect size": result.get("effect_size", None),
-                    "Cramer's V": result.get("cramers_v", None)
-                }]))
+                    if isinstance(res.get("result_df"), pd.DataFrame) and not res["result_df"].empty:
+                        st.dataframe(res["result_df"], use_container_width=True)
 
-                # --- Graphique associé ---
-                st.subheader("📊 Visualisation du résultat")
-                plot_path = result.get("plot") or result.get("plot_boxplot")
-                if plot_path:
-                    st.image(plot_path, use_column_width=True)
-                else:
-                    st.info("Aucun graphique disponible pour ce test.")
+                    if res.get("fig") is not None:
+                        st.pyplot(res["fig"])
 
             except Exception as e:
-                st.error(f"❌ Erreur pendant l'exécution du test : {e}")
+                st.error(f"❌ Une erreur est survenue pendant l'exécution : {e}")
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
     # --- 5️⃣ Navigation entre pages ---
-    st.markdown("---")
+    st.markdown("<hr>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if st.button("➡️ Page suivante : Tests multivariés"):
