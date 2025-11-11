@@ -166,10 +166,7 @@ def app():
                 except Exception:
                     st.write(test_detail["contingency_table"])
 
-            # --- 5) Affichage du résumé global (optionnel) ---
-            if st.checkbox("Afficher le résumé de tous les tests générés (pour debug)"):
-                st.subheader("Résumé de tous les tests (extrait)")
-                st.dataframe(summary_df.head(200))
+    
 
     # --- Navigation vers multivariés ---
     st.markdown("---")
@@ -177,3 +174,4 @@ def app():
     with col2:
         if st.button("➡️ Page suivante : Tests multivariés"):
             st.session_state.target_page = "Tests multivariés"
+
