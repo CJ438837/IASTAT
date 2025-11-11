@@ -20,7 +20,7 @@ pages = [
     "Descriptive",
     "Distribution",
     "Tests bivariés",
-    "Tests multivariés"
+    "Tests multivariés",
     "Contact"
 ]
 
@@ -60,5 +60,6 @@ elif st.session_state.target_page == "Tests multivariés":
 elif st.session_state.target_page == "Contact":
     from Pages import page_contact
     page_contact.app()
+
 
 
