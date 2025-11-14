@@ -1,30 +1,25 @@
 import streamlit as st
+from PIL import Image
 
 # --- 🔧 Thème CORVUS ---
 with open("assets/corvus_theme.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
+# --- Configuration page ---
 st.set_page_config(page_title="Appstats", layout="wide")
 
 # --- ⚙️ Initialisation ---
 if "target_page" not in st.session_state:
     st.session_state.target_page = "Accueil"
 
-
 # ======================================================
 # 🖼️ LOGO (correctif)
 # ======================================================
-# Affichage correct via Streamlit (100% compatible)
 try:
-        logo = Image.open("assets/logo.png")
-        st.image(logo, width=600)
-    except Exception as e:
-        st.warning(f"Logo non trouvé : {e}")
-    unsafe_allow_html=True
-)
-# Alternative (si jamais le HTML ne passe pas) :
-# st.image("assets/logo.png", width=160)
-
+    logo = Image.open("assets/logo.png")
+    st.image(logo, width=600)
+except Exception as e:
+    st.warning(f"Logo non trouvé : {e}")
 
 # ======================================================
 # 🧭 NAVBAR HORIZONTALE – version corrigée
@@ -78,31 +73,15 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Zone container
-nav_html = '<div class="navbar">'
-
-# Création des boutons horizontaux avec callbacks
 cols = st.columns(len(PAGES))
+
+# Création des boutons horizontaux
 for i, page in enumerate(PAGES):
     if cols[i].button(page, key=f"nav_{page}"):
         st.session_state.target_page = page
 
-# Indicateur visuel de page active
-st.markdown(
-    f"""
-    <style>
-    #{'nav_' + st.session_state.target_page} {{
-        background-color: #dbe8ff !important;
-        color: #1a3f8b !important;
-        border-color: #a7c5ff !important;
-    }}
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-
 # ======================================================
-# 🚀 Chargement dynamique de page (inchangé)
+# 🚀 Chargement dynamique de page
 # ======================================================
 if st.session_state.target_page == "Accueil":
     from Pages import page_accueil
@@ -128,4 +107,3 @@ elif st.session_state.target_page == "Tests multivariés":
 elif st.session_state.target_page == "Contact":
     from Pages import page_contact
     page_contact.app()
-
