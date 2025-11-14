@@ -1,33 +1,23 @@
 import streamlit as st
 
-# --- 🔧 Thème CORVUS ---
-with open("assets/corvus_theme.css") as f:
-    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-
+# --- PAGE CONFIG ---
 st.set_page_config(page_title="Appstats", layout="wide")
 
-# --- ⚙️ Initialisation ---
+# --- INIT ---
 if "target_page" not in st.session_state:
     st.session_state.target_page = "Accueil"
 
-
-# ======================================================
-# 🖼️ LOGO (au-dessus de la navbar)
-# ======================================================
-# Mets ton logo dans /assets/logo.png
-st.markdown(
-    """
-    <div style="text-align:center; margin-top: -30px; margin-bottom: 10px;">
-        <img src="assets/logo.png" width="160">
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+# ==========================================================
+# 🖼️ LOGO (version Streamlit → fonctionne vraiment)
+# ==========================================================
+st.markdown("<div style='text-align:center; margin-top:-20px;'>", unsafe_allow_html=True)
+st.image("assets/logo.png", width=160)
+st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ======================================================
-# 🧭 NAVIGATION HORIZONTALE DOUCE
-# ======================================================
+# ==========================================================
+# 🧭 NAVIGATION HORIZONTALE (Streamlit native, pas d'ouverture de page)
+# ==========================================================
 
 PAGES = [
     "Accueil",
@@ -40,38 +30,39 @@ PAGES = [
     "Contact"
 ]
 
-# --- Styles doux ---
+# Style doux
 st.markdown("""
 <style>
-.navbar {
+.navbar-container {
     display: flex;
-    gap: 10px;
-    padding: 8px 18px;
-    background-color: #f3f4f6;
+    justify-content: center;
+    gap: 12px;
+    background-color: #f4f5f7;
+    padding: 10px 20px;
     border-radius: 10px;
-    margin-bottom: 25px;
-    border: 1px solid #e1e1e1;
+    margin-top: 10px;
+    border: 1px solid #dcdcdc;
 }
 
-.navbar-button {
-    padding: 7px 14px;
-    background-color: #ffffff;
+.nav-btn {
+    padding: 8px 16px;
     border-radius: 6px;
-    color: #333333;
-    text-decoration: none;
+    border: 1px solid #cfcfcf;
+    background-color: white;
+    color: #333;
     font-weight: 500;
-    border: 1px solid #cccccc;
-    transition: 0.2s ease-in-out;
+    cursor: pointer;
+    transition: 0.2s;
 }
 
-.navbar-button:hover {
-    background-color: #e8f0fe;       /* bleu léger */
+.nav-btn:hover {
+    background-color: #e8f0fe;
     border-color: #b8d4ff;
     color: #1a3f8b;
 }
 
-.navbar-active {
-    background-color: #dbe8ff;       /* bleu pastel */
+.nav-btn-active {
+    background-color: #dbe8ff;
     border-color: #a7c5ff;
     color: #1a3f8b;
     font-weight: 600;
@@ -79,30 +70,33 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- Construire la navbar ---
-nav_html = '<div class="navbar">'
-for page in PAGES:
-    css_class = "navbar-button"
-    if st.session_state.target_page == page:
-        css_class += " navbar-active"
 
-    nav_html += (
-        f"<a class='{css_class}' href='?page={page.replace(' ', '%20')}'>{page}</a>"
-    )
+# Construction de la navbar
+nav_html = "<div class='navbar-container'>"
+for page in PAGES:
+    active = "nav-btn-active" if st.session_state.target_page == page else ""
+    nav_html += f"""
+        <button class='nav-btn {active}' onclick="window.location.href='/?nav={page}'">
+            {page}
+        </button>
+    """
 nav_html += "</div>"
 
 st.markdown(nav_html, unsafe_allow_html=True)
 
-# --- Synchronisation URL ---
-if "page" in st.query_params:
-    qp = st.query_params["page"]
-    if qp in PAGES:
-        st.session_state.target_page = qp
+# Lecture du paramètre de navigation
+if "nav" in st.query_params:
+    page = st.query_params["nav"]
+    if page in PAGES:
+        st.session_state.target_page = page
+        # On retire le paramètre pour éviter l'effet "reload"
+        st.query_params.clear()
 
 
-# ======================================================
-# 🚀 Chargement dynamique de page
-# ======================================================
+
+# ==========================================================
+# 🚀 Chargement dynamique des pages
+# ==========================================================
 if st.session_state.target_page == "Accueil":
     from Pages import page_accueil
     page_accueil.app()
