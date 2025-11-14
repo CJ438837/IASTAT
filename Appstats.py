@@ -15,23 +15,11 @@ if "analyse_subpage" not in st.session_state:
     st.session_state.analyse_subpage = "Fichier"
 
 # ======================================================
-# 🖼️ LOGO full width
+# 🖼️ LOGO
 # ======================================================
 try:
     logo = Image.open("assets/logo.png")
-    # On affiche le logo via HTML/CSS pour qu'il prenne toute la largeur
-    st.markdown(f"""
-    <style>
-    .full-width-logo {{
-        display: block;
-        width: 100%;
-        height: auto;
-        margin: 0;
-        padding: 0;
-    }}
-    </style>
-    <img src="assets/logo.png" class="full-width-logo">
-    """, unsafe_allow_html=True)
+    st.image(logo, width=250)
 except Exception as e:
     st.warning(f"Logo non trouvé : {e}")
 
@@ -73,6 +61,10 @@ st.markdown("""
     background-color: #dbe8ff;
     color: #1a3f8b;
     font-weight: 600;
+}
+.submenu {
+    margin-top: 10px;
+    margin-bottom: 20px;
 }
 </style>
 """, unsafe_allow_html=True)
