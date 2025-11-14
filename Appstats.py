@@ -15,12 +15,11 @@ if "target_page" not in st.session_state:
 # 🖼️ LOGO (correctif)
 # ======================================================
 # Affichage correct via Streamlit (100% compatible)
-st.markdown(
-    """
-    <div style="text-align:center; margin-top: -20px; margin-bottom: 10px;">
-        <img src="assets/logo.png" width="160">
-    </div>
-    """,
+try:
+        logo = Image.open("assets/logo.png")
+        st.image(logo, width=600)
+    except Exception as e:
+        st.warning(f"Logo non trouvé : {e}")
     unsafe_allow_html=True
 )
 # Alternative (si jamais le HTML ne passe pas) :
@@ -129,3 +128,4 @@ elif st.session_state.target_page == "Tests multivariés":
 elif st.session_state.target_page == "Contact":
     from Pages import page_contact
     page_contact.app()
+
