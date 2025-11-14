@@ -1,102 +1,93 @@
 import streamlit as st
 
-# --- PAGE CONFIG ---
+# --- 🔧 Thème CORVUS + CSS personnalisé ---
+with open("assets/corvus_theme.css") as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
 st.set_page_config(page_title="Appstats", layout="wide")
 
-# --- INIT ---
+# --- ⚙️ Initialisation de la page ---
 if "target_page" not in st.session_state:
     st.session_state.target_page = "Accueil"
 
-# ==========================================================
-# 🖼️ LOGO (version Streamlit → fonctionne vraiment)
-# ==========================================================
-st.markdown("<div style='text-align:center; margin-top:-20px;'>", unsafe_allow_html=True)
-st.image("assets/logo.png", width=160)
-st.markdown("</div>", unsafe_allow_html=True)
+# --- 🖼️ Logo ---
+st.markdown(
+    """
+    <div style="text-align:center; margin-bottom:10px;">
+        <img src="assets/logo.png" style="width:140px;">
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-
-# ==========================================================
-# 🧭 NAVIGATION HORIZONTALE (Streamlit native, pas d'ouverture de page)
-# ==========================================================
-
-PAGES = [
-    "Accueil",
-    "Fichier",
-    "Variables",
-    "Descriptive",
-    "Distribution",
-    "Tests bivariés",
-    "Tests multivariés",
-    "Contact"
+# --- 🔘 Barre de navigation horizontale ---
+pages = [
+    "Accueil", "Fichier", "Variables", "Descriptive",
+    "Distribution", "Tests bivariés", "Tests multivariés", "Contact"
 ]
 
-# Style doux
-st.markdown("""
-<style>
-.navbar-container {
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    background-color: #f4f5f7;
-    padding: 10px 20px;
-    border-radius: 10px;
-    margin-top: 10px;
-    border: 1px solid #dcdcdc;
-}
+st.markdown(
+    """
+    <style>
+    .nav-container {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 10px;
+        margin-bottom: 25px;
+    }
 
-.nav-btn {
-    padding: 8px 16px;
-    border-radius: 6px;
-    border: 1px solid #cfcfcf;
-    background-color: white;
-    color: #333;
-    font-weight: 500;
-    cursor: pointer;
-    transition: 0.2s;
-}
+    .nav-btn {
+        background-color: #2b2b2b;
+        padding: 8px 18px;
+        border-radius: 10px;
+        color: white !important;
+        border: 1px solid #444;
+        font-size: 15px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
 
-.nav-btn:hover {
-    background-color: #e8f0fe;
-    border-color: #b8d4ff;
-    color: #1a3f8b;
-}
+    .nav-btn:hover {
+        background-color: #3c3c3c;
+        border-color: #777;
+    }
 
-.nav-btn-active {
-    background-color: #dbe8ff;
-    border-color: #a7c5ff;
-    color: #1a3f8b;
-    font-weight: 600;
-}
-</style>
-""", unsafe_allow_html=True)
+    .nav-btn-active {
+        background-color: #5566ff;
+        border-color: #3344cc;
+        color: white !important;
+        font-weight: bold;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
+# Construction dynamique des boutons
+nav_html = "<div class='nav-container'>"
+for page in pages:
+    active_class = "nav-btn-active" if st.session_state.target_page == page else ""
 
-# Construction de la navbar
-nav_html = "<div class='navbar-container'>"
-for page in PAGES:
-    active = "nav-btn-active" if st.session_state.target_page == page else ""
-    nav_html += f"""
-        <button class='nav-btn {active}' onclick="window.location.href='/?nav={page}'">
+    nav_html += (
+        f"""
+        <button class="nav-btn {active_class}"
+            onclick="fetch('?nav={page}', {{method: 'POST'}})
+            .then(() => window.location.reload());">
             {page}
         </button>
-    """
+        """
+    )
 nav_html += "</div>"
 
 st.markdown(nav_html, unsafe_allow_html=True)
 
-# Lecture du paramètre de navigation
-if "nav" in st.query_params:
-    page = st.query_params["nav"]
-    if page in PAGES:
-        st.session_state.target_page = page
-        # On retire le paramètre pour éviter l'effet "reload"
-        st.query_params.clear()
+# --- 🔁 Synchronisation navigation ---
+nav = st.experimental_get_query_params().get("nav", [None])[0]
+if nav and nav in pages and nav != st.session_state.target_page:
+    st.session_state.target_page = nav
 
-
-
-# ==========================================================
-# 🚀 Chargement dynamique des pages
-# ==========================================================
+# --- 🚀 Chargement dynamique des pages ---
 if st.session_state.target_page == "Accueil":
     from Pages import page_accueil
     page_accueil.app()
