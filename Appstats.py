@@ -9,101 +9,117 @@ with open("assets/corvus_theme.css") as f:
 st.set_page_config(page_title="Appstats", layout="wide")
 
 # --- ⚙️ Initialisation ---
-if "target_page" not in st.session_state:
-    st.session_state.target_page = "Accueil"
+if "main_page" not in st.session_state:
+    st.session_state.main_page = "Accueil"
+if "analyse_subpage" not in st.session_state:
+    st.session_state.analyse_subpage = "Fichier"
 
 # ======================================================
-# 🖼️ LOGO (correctif)
+# 🖼️ LOGO
 # ======================================================
 try:
     logo = Image.open("assets/logo.png")
-    st.image(logo, width=600)
+    st.image(logo, width=250)
 except Exception as e:
     st.warning(f"Logo non trouvé : {e}")
 
 # ======================================================
-# 🧭 NAVBAR HORIZONTALE – version corrigée
+# 🧭 MENU HORIZONTAL
 # ======================================================
-
-PAGES = [
-    "Accueil",
+MAIN_PAGES = ["Accueil", "Analyse", "Contact"]
+ANALYSE_PAGES = [
     "Fichier",
     "Variables",
     "Descriptive",
     "Distribution",
     "Tests bivariés",
-    "Tests multivariés",
-    "Contact"
+    "Tests multivariés"
 ]
 
-# --- Styles doux ---
+# --- Styles CSS pour menu horizontal ---
 st.markdown("""
 <style>
-.navbar {
+.menu-container {
     display: flex;
-    gap: 10px;
-    padding: 8px 18px;
-    background-color: #f3f4f6;
-    border-radius: 10px;
-    margin-bottom: 25px;
-    border: 1px solid #e1e1e1;
+    gap: 15px;
+    margin-bottom: 20px;
 }
-.navbar-button {
-    padding: 7px 14px;
-    background-color: #ffffff;
+.menu-item {
+    padding: 8px 16px;
     border-radius: 6px;
+    background-color: #f3f4f6;
     color: #333333;
-    text-decoration: none;
     font-weight: 500;
-    border: 1px solid #cccccc;
-    transition: 0.2s ease-in-out;
+    cursor: pointer;
+    transition: 0.2s;
 }
-.navbar-button:hover {
+.menu-item:hover {
     background-color: #e8f0fe;
-    border-color: #b8d4ff;
     color: #1a3f8b;
 }
-.navbar-active {
+.menu-active {
     background-color: #dbe8ff;
-    border-color: #a7c5ff;
     color: #1a3f8b;
     font-weight: 600;
+}
+.submenu {
+    margin-top: 10px;
+    margin-bottom: 20px;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# Zone container
-cols = st.columns(len(PAGES))
+# --- Affichage du menu horizontal ---
+cols = st.columns(len(MAIN_PAGES))
+for i, page in enumerate(MAIN_PAGES):
+    if cols[i].button(page, key=f"main_{page}"):
+        st.session_state.main_page = page
 
-# Création des boutons horizontaux
-for i, page in enumerate(PAGES):
-    if cols[i].button(page, key=f"nav_{page}"):
-        st.session_state.target_page = page
+# Indicateur visuel de page active
+st.markdown(f"""
+<style>
+button[kind="secondary"][data-testid="stButton"][key="main_{st.session_state.main_page}"] {{
+    background-color: #dbe8ff;
+    color: #1a3f8b;
+    font-weight: 600;
+}}
+</style>
+""", unsafe_allow_html=True)
 
 # ======================================================
-# 🚀 Chargement dynamique de page
+# 🚀 Chargement des pages
 # ======================================================
-if st.session_state.target_page == "Accueil":
+if st.session_state.main_page == "Accueil":
     from Pages import page_accueil
     page_accueil.app()
-elif st.session_state.target_page == "Fichier":
-    from Pages import page_fichier
-    page_fichier.app()
-elif st.session_state.target_page == "Variables":
-    from Pages import page_variables
-    page_variables.app()
-elif st.session_state.target_page == "Descriptive":
-    from Pages import page_descriptive
-    page_descriptive.app()
-elif st.session_state.target_page == "Distribution":
-    from Pages import page_distribution
-    page_distribution.app()
-elif st.session_state.target_page == "Tests bivariés":
-    from Pages import page_testsbivaries
-    page_testsbivaries.app()
-elif st.session_state.target_page == "Tests multivariés":
-    from Pages import page_testsmulti
-    page_testsmulti.app()
-elif st.session_state.target_page == "Contact":
+
+elif st.session_state.main_page == "Analyse":
+    st.subheader("Analyse")
+    st.session_state.analyse_subpage = st.selectbox(
+        "Choisir l'analyse :", ANALYSE_PAGES, index=ANALYSE_PAGES.index(st.session_state.analyse_subpage)
+    )
+
+    # Charger la sous-page sélectionnée
+    sub = st.session_state.analyse_subpage
+    if sub == "Fichier":
+        from Pages import page_fichier
+        page_fichier.app()
+    elif sub == "Variables":
+        from Pages import page_variables
+        page_variables.app()
+    elif sub == "Descriptive":
+        from Pages import page_descriptive
+        page_descriptive.app()
+    elif sub == "Distribution":
+        from Pages import page_distribution
+        page_distribution.app()
+    elif sub == "Tests bivariés":
+        from Pages import page_testsbivaries
+        page_testsbivaries.app()
+    elif sub == "Tests multivariés":
+        from Pages import page_testsmulti
+        page_testsmulti.app()
+
+elif st.session_state.main_page == "Contact":
     from Pages import page_contact
     page_contact.app()
