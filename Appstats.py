@@ -15,11 +15,19 @@ if "analyse_subpage" not in st.session_state:
     st.session_state.analyse_subpage = "Fichier"
 
 # ======================================================
-# 🖼️ LOGO
+# 🖼️ LOGO full-width
 # ======================================================
 try:
     logo = Image.open("assets/logo.png")
-    st.image(logo, width=250)
+    # Affichage full width via HTML
+    st.markdown(
+        f"""
+        <div style="text-align:center; width:100%; margin-bottom:20px;">
+            <img src="assets/logo.png" style="width:100%; height:auto;">
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 except Exception as e:
     st.warning(f"Logo non trouvé : {e}")
 
