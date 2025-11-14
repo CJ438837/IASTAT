@@ -1,93 +1,108 @@
 import streamlit as st
 
-# --- 🔧 Thème CORVUS + CSS personnalisé ---
+# --- 🔧 Thème CORVUS ---
 with open("assets/corvus_theme.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 st.set_page_config(page_title="Appstats", layout="wide")
 
-# --- ⚙️ Initialisation de la page ---
+# --- ⚙️ Initialisation ---
 if "target_page" not in st.session_state:
     st.session_state.target_page = "Accueil"
 
-# --- 🖼️ Logo ---
+
+# ======================================================
+# 🖼️ LOGO (au-dessus de la navbar)
+# ======================================================
+# Mets ton logo dans /assets/logo.png
 st.markdown(
     """
-    <div style="text-align:center; margin-bottom:10px;">
-        <img src="assets/logo.png" style="width:140px;">
+    <div style="text-align:center; margin-top: -30px; margin-bottom: 10px;">
+        <img src="assets/logo.png" width="160">
     </div>
     """,
     unsafe_allow_html=True
 )
 
-# --- 🔘 Barre de navigation horizontale ---
-pages = [
-    "Accueil", "Fichier", "Variables", "Descriptive",
-    "Distribution", "Tests bivariés", "Tests multivariés", "Contact"
+
+# ======================================================
+# 🧭 NAVIGATION HORIZONTALE DOUCE
+# ======================================================
+
+PAGES = [
+    "Accueil",
+    "Fichier",
+    "Variables",
+    "Descriptive",
+    "Distribution",
+    "Tests bivariés",
+    "Tests multivariés",
+    "Contact"
 ]
 
-st.markdown(
-    """
-    <style>
-    .nav-container {
-        display: flex;
-        justify-content: center;
-        gap: 12px;
-        margin-top: 10px;
-        margin-bottom: 25px;
-    }
+# --- Styles doux ---
+st.markdown("""
+<style>
+.navbar {
+    display: flex;
+    gap: 10px;
+    padding: 8px 18px;
+    background-color: #f3f4f6;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    border: 1px solid #e1e1e1;
+}
 
-    .nav-btn {
-        background-color: #2b2b2b;
-        padding: 8px 18px;
-        border-radius: 10px;
-        color: white !important;
-        border: 1px solid #444;
-        font-size: 15px;
-        cursor: pointer;
-        transition: 0.2s;
-    }
+.navbar-button {
+    padding: 7px 14px;
+    background-color: #ffffff;
+    border-radius: 6px;
+    color: #333333;
+    text-decoration: none;
+    font-weight: 500;
+    border: 1px solid #cccccc;
+    transition: 0.2s ease-in-out;
+}
 
-    .nav-btn:hover {
-        background-color: #3c3c3c;
-        border-color: #777;
-    }
+.navbar-button:hover {
+    background-color: #e8f0fe;       /* bleu léger */
+    border-color: #b8d4ff;
+    color: #1a3f8b;
+}
 
-    .nav-btn-active {
-        background-color: #5566ff;
-        border-color: #3344cc;
-        color: white !important;
-        font-weight: bold;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+.navbar-active {
+    background-color: #dbe8ff;       /* bleu pastel */
+    border-color: #a7c5ff;
+    color: #1a3f8b;
+    font-weight: 600;
+}
+</style>
+""", unsafe_allow_html=True)
 
-# Construction dynamique des boutons
-nav_html = "<div class='nav-container'>"
-for page in pages:
-    active_class = "nav-btn-active" if st.session_state.target_page == page else ""
+# --- Construire la navbar ---
+nav_html = '<div class="navbar">'
+for page in PAGES:
+    css_class = "navbar-button"
+    if st.session_state.target_page == page:
+        css_class += " navbar-active"
 
     nav_html += (
-        f"""
-        <button class="nav-btn {active_class}"
-            onclick="fetch('?nav={page}', {{method: 'POST'}})
-            .then(() => window.location.reload());">
-            {page}
-        </button>
-        """
+        f"<a class='{css_class}' href='?page={page.replace(' ', '%20')}'>{page}</a>"
     )
 nav_html += "</div>"
 
 st.markdown(nav_html, unsafe_allow_html=True)
 
-# --- 🔁 Synchronisation navigation ---
-nav = st.experimental_get_query_params().get("nav", [None])[0]
-if nav and nav in pages and nav != st.session_state.target_page:
-    st.session_state.target_page = nav
+# --- Synchronisation URL ---
+if "page" in st.query_params:
+    qp = st.query_params["page"]
+    if qp in PAGES:
+        st.session_state.target_page = qp
 
-# --- 🚀 Chargement dynamique des pages ---
+
+# ======================================================
+# 🚀 Chargement dynamique de page
+# ======================================================
 if st.session_state.target_page == "Accueil":
     from Pages import page_accueil
     page_accueil.app()
