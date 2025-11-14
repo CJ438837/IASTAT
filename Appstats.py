@@ -12,21 +12,23 @@ if "target_page" not in st.session_state:
 
 
 # ======================================================
-# 🖼️ LOGO (au-dessus de la navbar)
+# 🖼️ LOGO (correctif)
 # ======================================================
-# Mets ton logo dans /assets/logo.png
+# Affichage correct via Streamlit (100% compatible)
 st.markdown(
     """
-    <div style="text-align:center; margin-top: -30px; margin-bottom: 10px;">
+    <div style="text-align:center; margin-top: -20px; margin-bottom: 10px;">
         <img src="assets/logo.png" width="160">
     </div>
     """,
     unsafe_allow_html=True
 )
+# Alternative (si jamais le HTML ne passe pas) :
+# st.image("assets/logo.png", width=160)
 
 
 # ======================================================
-# 🧭 NAVIGATION HORIZONTALE DOUCE
+# 🧭 NAVBAR HORIZONTALE – version corrigée
 # ======================================================
 
 PAGES = [
@@ -52,7 +54,6 @@ st.markdown("""
     margin-bottom: 25px;
     border: 1px solid #e1e1e1;
 }
-
 .navbar-button {
     padding: 7px 14px;
     background-color: #ffffff;
@@ -63,15 +64,13 @@ st.markdown("""
     border: 1px solid #cccccc;
     transition: 0.2s ease-in-out;
 }
-
 .navbar-button:hover {
-    background-color: #e8f0fe;       /* bleu léger */
+    background-color: #e8f0fe;
     border-color: #b8d4ff;
     color: #1a3f8b;
 }
-
 .navbar-active {
-    background-color: #dbe8ff;       /* bleu pastel */
+    background-color: #dbe8ff;
     border-color: #a7c5ff;
     color: #1a3f8b;
     font-weight: 600;
@@ -79,29 +78,32 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- Construire la navbar ---
+# Zone container
 nav_html = '<div class="navbar">'
-for page in PAGES:
-    css_class = "navbar-button"
-    if st.session_state.target_page == page:
-        css_class += " navbar-active"
 
-    nav_html += (
-        f"<a class='{css_class}' href='?page={page.replace(' ', '%20')}'>{page}</a>"
-    )
-nav_html += "</div>"
+# Création des boutons horizontaux avec callbacks
+cols = st.columns(len(PAGES))
+for i, page in enumerate(PAGES):
+    if cols[i].button(page, key=f"nav_{page}"):
+        st.session_state.target_page = page
 
-st.markdown(nav_html, unsafe_allow_html=True)
-
-# --- Synchronisation URL ---
-if "page" in st.query_params:
-    qp = st.query_params["page"]
-    if qp in PAGES:
-        st.session_state.target_page = qp
+# Indicateur visuel de page active
+st.markdown(
+    f"""
+    <style>
+    #{'nav_' + st.session_state.target_page} {{
+        background-color: #dbe8ff !important;
+        color: #1a3f8b !important;
+        border-color: #a7c5ff !important;
+    }}
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 
 # ======================================================
-# 🚀 Chargement dynamique de page
+# 🚀 Chargement dynamique de page (inchangé)
 # ======================================================
 if st.session_state.target_page == "Accueil":
     from Pages import page_accueil
