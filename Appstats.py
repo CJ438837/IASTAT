@@ -10,9 +10,24 @@ st.set_page_config(page_title="Appstats", layout="wide")
 if "target_page" not in st.session_state:
     st.session_state.target_page = "Accueil"
 
-# ======================================
-# 🧭 NAVIGATION HORIZONTALE EN BANDEAU
-# ======================================
+
+# ======================================================
+# 🖼️ LOGO (au-dessus de la navbar)
+# ======================================================
+# Mets ton logo dans /assets/logo.png
+st.markdown(
+    """
+    <div style="text-align:center; margin-top: -30px; margin-bottom: 10px;">
+        <img src="assets/logo.png" width="160">
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+
+# ======================================================
+# 🧭 NAVIGATION HORIZONTALE DOUCE
+# ======================================================
 
 PAGES = [
     "Accueil",
@@ -25,37 +40,46 @@ PAGES = [
     "Contact"
 ]
 
-# --- Barre horizontale personnalisée ---
+# --- Styles doux ---
 st.markdown("""
 <style>
 .navbar {
     display: flex;
-    gap: 12px;
-    padding: 10px 20px;
-    background-color: #1f1f1f;
-    border-radius: 8px;
+    gap: 10px;
+    padding: 8px 18px;
+    background-color: #f3f4f6;
+    border-radius: 10px;
     margin-bottom: 25px;
+    border: 1px solid #e1e1e1;
 }
+
 .navbar-button {
-    padding: 8px 16px;
-    background-color: #333;
+    padding: 7px 14px;
+    background-color: #ffffff;
     border-radius: 6px;
-    color: white;
+    color: #333333;
     text-decoration: none;
     font-weight: 500;
-    border: 1px solid #444;
+    border: 1px solid #cccccc;
+    transition: 0.2s ease-in-out;
 }
+
 .navbar-button:hover {
-    background-color: #555;
+    background-color: #e8f0fe;       /* bleu léger */
+    border-color: #b8d4ff;
+    color: #1a3f8b;
 }
+
 .navbar-active {
-    background-color: #4c8bf5 !important;
-    border-color: #4c8bf5 !important;
+    background-color: #dbe8ff;       /* bleu pastel */
+    border-color: #a7c5ff;
+    color: #1a3f8b;
+    font-weight: 600;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# --- Construction dynamique du menu ---
+# --- Construire la navbar ---
 nav_html = '<div class="navbar">'
 for page in PAGES:
     css_class = "navbar-button"
@@ -69,15 +93,16 @@ nav_html += "</div>"
 
 st.markdown(nav_html, unsafe_allow_html=True)
 
-# --- Synchronisation avec l’URL ---
+# --- Synchronisation URL ---
 if "page" in st.query_params:
     qp = st.query_params["page"]
     if qp in PAGES:
         st.session_state.target_page = qp
 
-# ======================================
-# 🚀 Chargement dynamique de la page
-# ======================================
+
+# ======================================================
+# 🚀 Chargement dynamique de page
+# ======================================================
 if st.session_state.target_page == "Accueil":
     from Pages import page_accueil
     page_accueil.app()
