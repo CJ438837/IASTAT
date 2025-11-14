@@ -19,7 +19,7 @@ if "analyse_subpage" not in st.session_state:
 # ======================================================
 try:
     logo = Image.open("assets/logo.png")
-    st.image(logo, width=250)
+    st.image(logo, width=1000)
 except Exception as e:
     st.warning(f"Logo non trouvé : {e}")
 
@@ -123,3 +123,4 @@ elif st.session_state.main_page == "Analyse":
 elif st.session_state.main_page == "Contact":
     from Pages import page_contact
     page_contact.app()
+
