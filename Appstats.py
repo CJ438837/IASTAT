@@ -10,10 +10,11 @@ st.set_page_config(page_title="Appstats", layout="wide")
 if "target_page" not in st.session_state:
     st.session_state.target_page = "Accueil"
 
-# --- 🧭 Menu latéral ---
-st.sidebar.title("Navigation")
+# ======================================
+# 🧭 NAVIGATION HORIZONTALE EN BANDEAU
+# ======================================
 
-pages = [
+PAGES = [
     "Accueil",
     "Fichier",
     "Variables",
@@ -24,18 +25,59 @@ pages = [
     "Contact"
 ]
 
-# Le radio contrôle la navigation manuelle
-selected_page = st.sidebar.radio(
-    "Aller à :",
-    pages,
-    index=pages.index(st.session_state.target_page)
-)
+# --- Barre horizontale personnalisée ---
+st.markdown("""
+<style>
+.navbar {
+    display: flex;
+    gap: 12px;
+    padding: 10px 20px;
+    background-color: #1f1f1f;
+    border-radius: 8px;
+    margin-bottom: 25px;
+}
+.navbar-button {
+    padding: 8px 16px;
+    background-color: #333;
+    border-radius: 6px;
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    border: 1px solid #444;
+}
+.navbar-button:hover {
+    background-color: #555;
+}
+.navbar-active {
+    background-color: #4c8bf5 !important;
+    border-color: #4c8bf5 !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
-# Si on clique dans la sidebar, on met à jour la cible
-if selected_page != st.session_state.target_page:
-    st.session_state.target_page = selected_page
+# --- Construction dynamique du menu ---
+nav_html = '<div class="navbar">'
+for page in PAGES:
+    css_class = "navbar-button"
+    if st.session_state.target_page == page:
+        css_class += " navbar-active"
 
-# --- 🚀 Chargement dynamique de la page ---
+    nav_html += (
+        f"<a class='{css_class}' href='?page={page.replace(' ', '%20')}'>{page}</a>"
+    )
+nav_html += "</div>"
+
+st.markdown(nav_html, unsafe_allow_html=True)
+
+# --- Synchronisation avec l’URL ---
+if "page" in st.query_params:
+    qp = st.query_params["page"]
+    if qp in PAGES:
+        st.session_state.target_page = qp
+
+# ======================================
+# 🚀 Chargement dynamique de la page
+# ======================================
 if st.session_state.target_page == "Accueil":
     from Pages import page_accueil
     page_accueil.app()
@@ -60,6 +102,3 @@ elif st.session_state.target_page == "Tests multivariés":
 elif st.session_state.target_page == "Contact":
     from Pages import page_contact
     page_contact.app()
-
-
-
