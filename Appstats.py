@@ -26,7 +26,16 @@ except Exception as e:
 # ======================================================
 # 🧭 MENU HORIZONTAL
 # ======================================================
-MAIN_PAGES = ["Accueil", "Analyse", "Contact"]
+MAIN_PAGES = ["Accueil","Théorie", "Analyse", "Contact"]
+THEORIE_PAGES = [
+    "Fichier",
+    "Variables",
+    "Descriptive",
+    "Distribution",
+    "Tests bivariés",
+    "Tests multivariés"
+]
+
 ANALYSE_PAGES = [
     "Fichier",
     "Variables",
@@ -93,6 +102,30 @@ if st.session_state.main_page == "Accueil":
     from Pages import page_accueil
     page_accueil.app()
 
+elif st.session_state.main_page == "Théorie":
+    st.subheader("Théorie")
+    st.session_state.theorie_subpage = st.selectbox(
+        "Choisir la section:", THEORIE_PAGES, index=THEOIRE_PAGES.index(st.session_state.theorie_subpage)
+    )
+
+    # Charger la sous-page sélectionnée
+    sub = st.session_state.theorie_subpage
+    if sub == "Variables":
+        from Pages import page_variablesT
+        page_variablesT.app()
+    elif sub == "Descriptive":
+        from Pages import page_descriptiveT
+        page_descriptiveT.app()
+    elif sub == "Distribution":
+        from Pages import page_distributionT
+        page_distributionT.app()
+    elif sub == "Tests bivariés":
+        from Pages import page_bivariesT
+        page_bivariesT.app()
+    elif sub == "Tests multivariés":
+        from Pages import page_multiT
+        page_multiT.app()
+
 elif st.session_state.main_page == "Analyse":
     st.subheader("Analyse")
     st.session_state.analyse_subpage = st.selectbox(
@@ -123,4 +156,5 @@ elif st.session_state.main_page == "Analyse":
 elif st.session_state.main_page == "Contact":
     from Pages import page_contact
     page_contact.app()
+
 
