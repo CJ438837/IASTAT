@@ -1,105 +1,130 @@
 import streamlit as st
-from PIL import Image
+import os
+from modules.IA_STAT_distribution_251125 import advanced_distribution_analysis
 
 def app():
+    # --- 🎨 Thème Corvus ---
+    try:
+        with open("assets/corvus_theme.css") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    except Exception as e:
+        st.warning(f"Impossible de charger le thème Corvus : {e}")
 
-    st.title("📈 Analyse Avancée des Distributions — Théorie")
-
+    # --- 🧠 En-tête ---
+    st.markdown("<h1 class='corvus-title'>Analyse de Distribution</h1>", unsafe_allow_html=True)
     st.markdown("""
-    L’analyse des distributions vise à comprendre **la forme**, **la normalité** et **le comportement statistique** des variables
-    numériques dans un jeu de données.  
-    C’est une étape essentielle avant toute modélisation, car elle influence le choix des tests statistiques et des transformations éventuelles.
+    **Regardons la distribution de vos variables numériques.**
+    **Indispenssable pour le choix adéquat des tests lors des prochaines étapes**
     """)
 
+    # --- 1️⃣ Vérification des prérequis ---
+    if "df_selected" not in st.session_state:
+        st.warning("⚠️ Veuillez d'abord importer un fichier dans la page **Fichier**.")
+        st.stop()
+    if "types_df" not in st.session_state:
+        st.warning("⚠️ Veuillez d'abord détecter les types de variables dans la page **Variables**.")
+        st.stop()
+
+    df = st.session_state["df_selected"]
+    types_df = st.session_state["types_df"]
+
+    st.success("✅ Données et types de variables prêts pour l'analyse.")
+
+    # --- 2️⃣ Sélection de la variable ---
+    st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
+    st.markdown("### 🎯 Sélection de la variable numérique à analyser")
+    st.markdown("<p class='corvus-text'>Choisissez la variable pour laquelle vous souhaitez étudier la distribution.</p>", unsafe_allow_html=True)
+
+    numeric_vars = types_df[types_df["type"] == "numérique"]["variable"].tolist()
+    selected_var = st.selectbox("Variable à analyser", options=numeric_vars)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    if not selected_var:
+        st.warning("⚠️ Sélectionnez une variable pour continuer.")
+        st.stop()
+
+    # --- 3️⃣ Bouton d'analyse ---
+    st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
+    st.markdown("### 📈 Lancer l'analyse de distribution")
+
+    run_analysis = st.button("📈 Démarrer l'analyse", use_container_width=True)
+
+    if run_analysis:
+        with st.spinner("Analyse en cours..."):
+            output_folder = "distribution_plots"
+            os.makedirs(output_folder, exist_ok=True)
+
+            distribution_df = advanced_distribution_analysis(
+                df[[selected_var]],
+                types_df[types_df["variable"] == selected_var],
+                output_folder=output_folder
+            )
+
+            st.session_state["distribution_df"] = distribution_df
+            st.success("✅ Analyse terminée avec succès !")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- 4️⃣ Résumé des résultats ---
+    st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
+    st.markdown("### 🧾 Résumé des tests de distribution")
+
+    if "distribution_df" in st.session_state and not st.session_state["distribution_df"].empty:
+        st.dataframe(st.session_state["distribution_df"], use_container_width=True)
+    else:
+        st.info("Cliquez sur **Démarrer l'analyse** pour afficher les résultats.")
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.stop()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- 5️⃣ Navigation des graphiques ---
+    st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
+    st.markdown("### 📉 Visualisations associées")
+
+    output_folder = "distribution_plots"
+    plot_files = sorted(
+        [f for f in os.listdir(output_folder) if f.endswith(".png") and selected_var in f]
+    )
+
+    if not plot_files:
+        st.warning("Aucun graphique généré pour cette variable.")
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
+
+    if "dist_plot_index" not in st.session_state:
+        st.session_state.dist_plot_index = 0
+
+    def prev_plot():
+        if st.session_state.dist_plot_index > 0:
+            st.session_state.dist_plot_index -= 1
+
+    def next_plot():
+        if st.session_state.dist_plot_index < len(plot_files) - 1:
+            st.session_state.dist_plot_index += 1
+
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col1:
+        st.button("⬅️ Précédent", on_click=prev_plot, key="prev_dist_plot")
+    with col3:
+        st.button("Suivant ➡️", on_click=next_plot, key="next_dist_plot")
+
+    plot_path = os.path.join(output_folder, plot_files[st.session_state.dist_plot_index])
+    st.image(plot_path, use_column_width=True)
+    st.caption(
+        f"Graphique {st.session_state.dist_plot_index + 1} / {len(plot_files)} : "
+        f"{plot_files[st.session_state.dist_plot_index]}"
+    )
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- ➡️ Navigation ---
     st.markdown("---")
-    st.header("🧪 1. Les tests de normalité")
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("➡️ Passer à la page Tests bivariés", use_container_width=True):
+               st.session_state.target_page = "Tests bivariés"
 
-    st.markdown("""
-    Évaluer si une variable suit une distribution normale est fondamental pour décider si des méthodes 
-    **paramétriques** ou **non paramétriques** doivent être utilisées.
 
-    ### 🔹 **Test de Shapiro–Wilk**
-    - Très adapté aux petits et moyens échantillons  
-    - Hypothèse nulle : *la variable suit une distribution normale*  
-    - Interprétation :  
-      - **p > 0.05** → normalité plausible  
-      - **p ≤ 0.05** → normalité rejetée
 
-    ### 🔹 **Test de Kolmogorov–Smirnov**
-    - Plus approprié pour les grands échantillons  
-    - Compare les données à une distribution normale de référence  
-    - Interprétation identique :  
-      - **p > 0.05** → normalité plausible  
-      - **p ≤ 0.05** → normalité rejetée
-
-    Une variable normalement distribuée permettra l’utilisation de tests
-    comme le t-test, l’ANOVA ou les corrélations de Pearson.
-    """)
-
-    st.markdown("---")
-    st.header("📊 2. Identification de la distribution la plus probable")
-
-    st.markdown("""
-    Comprendre la distribution d’une variable permet d’interpréter correctement les phénomènes qu’elle représente.
-
-    ### 🔹 Variables discrètes
-    Les distributions les plus fréquentes sont :
-    - **Poisson** : modélise des comptages (nombre d’événements).  
-    - **Binomiale** : modélise un nombre de succès dans une série d’essais.
-
-    ### 🔹 Variables continues
-    Certaines distributions reviennent régulièrement :
-    - **Normale** : symétrique, en cloche, très répandue en biologie et en physique.  
-    - **Exponentielle** : décroissante, utilisée pour modéliser des durées d’attente ou des phénomènes de survie.  
-    - **Log-normale** : asymétrique, fréquente lorsque les valeurs sont multipliées plutôt qu’additionnées.  
-    - **Uniforme** : absence de structure, toutes les valeurs sont équiprobables.
-
-    Identifier la bonne distribution permet :
-    - d’appliquer des tests adaptés,
-    - de comprendre l’origine d’une asymétrie,
-    - d’anticiper les transformations nécessaires avant modélisation.
-    """)
-
-    st.markdown("---")
-    st.header("📉 3. Visualisations essentielles")
-
-    st.markdown("""
-    Pour interpréter la distribution d’une variable, deux graphiques sont particulièrement importants :
-
-    ### **1️⃣ Histogramme et courbe de densité**
-    Ils permettent de visualiser :
-    - la forme globale de la distribution,  
-    - la symétrie ou asymétrie,  
-    - les éventuelles valeurs extrêmes,  
-    - l’homogénéité ou la dispersion des observations.
-
-    ### **2️⃣ QQ-Plot (Quantile–Quantile Plot)**
-    Cet outil compare les quantiles des données à ceux d’une distribution normale.  
-    - Si les points suivent une diagonale → la variable est compatible avec une loi normale.  
-    - Des écarts marqués traduisent une asymétrie ou une distribution différente.
-
-    Ces représentations graphiques sont essentielles pour valider visuellement l’hypothèse de normalité.
-    """)
-
-    st.markdown("---")
-    st.header("📋 4. Synthèse interprétative")
-
-    st.markdown("""
-    L’analyse d’une distribution permet de conclure sur :
-
-    - **La normalité ou non-normalité** d’une variable  
-    - **L’éventuelle transformation** à appliquer (log, standardisation…)  
-    - **La famille de distributions la plus cohérente**  
-    - **Le choix des futurs tests statistiques**  
-
-    Cette étape constitue un socle indispensable pour toute analyse bivariée, multivariée ou modélisation prédictive.
-    """)
-
-    st.markdown("---")
-
-    st.markdown("""
-    Retrouvez l’application dédiée dans l’onglet :  
-    👉 *Analyse → Distribution*  
-    """)
-
-    st.markdown("© 2025 Corvus Analytics - Tous droits réservés")
