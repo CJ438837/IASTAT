@@ -244,18 +244,25 @@ def propose_tests_bivaries(types_df, distribution_df, df,
 
         summary_records.append({
             "test_id": key, "test": test_name, "var1": v1, "var2": v2,
-            "stat": stat, "p_value": p, "interpretation": interpretation,
-            "recommended_test": recommended_test
+            "stat": stat, "p_value": p, "effect_size": stat,
+            "interpretation": interpretation,
+            "recommended_test": recommended_test,
+            "cramers_v": None
         })
 
         details[key] = {
             "type": "num-num", "var1": v1, "var2": v2,
-            "test": test_name, "statistic": float(stat) if not pd.isna(stat) else np.nan,
+            "test": test_name,
+            "statistic": float(stat) if not pd.isna(stat) else np.nan,
             "p_value": float(p) if not pd.isna(p) else np.nan,
+            "effect_size": float(stat) if not pd.isna(stat) else np.nan,
+            "cramers_v": None,
             "kendall_tau": tau, "kendall_p": p_tau,
-            "plot": plot_path, "interpretation": interpretation,
+            "plot": plot_path,
+            "interpretation": interpretation,
             "normality_var1": norm1, "normality_var2": norm2,
-            "ci_low": ci_low, "ci_high": ci_high, "theil_sen": theil_sen
+            "ci_low": ci_low, "ci_high": ci_high,
+            "theil_sen": theil_sen
         }
 
     # === Numérique vs Catégoriel ===
@@ -324,14 +331,20 @@ def propose_tests_bivaries(types_df, distribution_df, df,
 
         summary_records.append({
             "test_id": key, "test": test_name, "var_num": num, "var_cat": cat,
-            "stat": stat, "p_value": p, "effect": effect, "interpretation": interpretation,
-            "recommended_test": recommended_test
+            "stat": stat, "p_value": p, "effect_size": effect,
+            "interpretation": interpretation,
+            "recommended_test": recommended_test,
+            "cramers_v": None
         })
+
         details[key] = {
             "type": "num-cat", "var_num": num, "var_cat": cat,
             "n_modalities": n_mod, "levene_stat": lv_stat, "levene_p": lv_p,
             "equal_var": equal_var, "test": test_name, "statistic": stat,
-            "p_value": p, "effect_size": effect, "plot_boxplot": plot_path,
+            "p_value": p,
+            "effect_size": effect,
+            "cramers_v": None,
+            "plot_boxplot": plot_path,
             "interpretation": interpretation
         }
 
@@ -373,15 +386,22 @@ def propose_tests_bivaries(types_df, distribution_df, df,
 
         summary_records.append({
             "test_id": key, "test": test_name, "var1": v1, "var2": v2,
-            "stat": stat, "p_value": p, "cramers_v": cram, "interpretation": interpretation,
+            "stat": stat, "p_value": p, "effect_size": cram,
+            "cramers_v": cram,
+            "interpretation": interpretation,
             "recommended_test": recommended_test
         })
+
         details[key] = {
             "type": "cat-cat", "var1": v1, "var2": v2, "contingency_table": table,
             "test": test_name, "statistic": stat, "p_value": p,
-            "cramers_v": cram, "plot": plot_path, "interpretation": interpretation
+            "effect_size": cram,
+            "cramers_v": cram,
+            "plot": plot_path,
+            "interpretation": interpretation
         }
 
+    # --- Correction p-values
     summary_df = pd.DataFrame(summary_records)
     try:
         corrected = multipletests(summary_df['p_value'].fillna(1), method='fdr_bh')[1]
