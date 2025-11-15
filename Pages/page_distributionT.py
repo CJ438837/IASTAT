@@ -1,7 +1,7 @@
 import streamlit as st
 
 def app():
-    st.title("📊 Analyse des Distributions — Théorie & Interprétation")
+    st.title("📊 Analyse des Distributions")
     st.markdown("---")
 
     st.subheader("🎯 Objectif")
