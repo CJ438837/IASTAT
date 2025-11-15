@@ -21,7 +21,6 @@ def app():
 
     # --- Variables numériques vs numériques ---
     st.subheader("🔷 Variables numériques vs numériques")
-    with st.expander("📌 Théorie"):
         st.markdown("""
         - **Corrélation de Pearson** : si les deux variables sont **normales**  
         - **Corrélation de Spearman** : si les distributions ne sont pas normales  
@@ -34,7 +33,6 @@ def app():
 
     # --- Variables numériques vs catégorielles ---
     st.subheader("🔷 Variables numériques vs catégorielles")
-    with st.expander("📌 Théorie"):
         st.markdown("""
         - **T-test** (2 groupes) ou **ANOVA** (≥3 groupes) : si normalité et homogénéité des variances  
         - **Mann-Whitney / Kruskal-Wallis** : si non-normalité  
@@ -47,7 +45,6 @@ def app():
 
     # --- Variables catégorielles vs catégorielles ---
     st.subheader("🔷 Variables catégorielles vs catégorielles")
-    with st.expander("📌 Théorie"):
         st.markdown("""
         - **Test du Chi²** : si effectifs suffisants  
         - **Test exact de Fisher** : si effectifs faibles  
