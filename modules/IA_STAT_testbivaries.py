@@ -1,6 +1,6 @@
-# modules/IA_STAT_testbivaries.py (fonction mise à jour)
+# modules/IA_STAT_testbivaries.py
 # ===========================================
-# 📊 IA-STAT - Tests bivariés avec interprétation automatique (corrigé)
+# 📊 IA-STAT - Tests bivariés avec interprétation automatique (version expert complète)
 # ===========================================
 import os
 import math
@@ -10,11 +10,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
-from scipy.stats import shapiro, levene, chi2_contingency, fisher_exact
+from scipy.stats import shapiro, levene, chi2_contingency, fisher_exact, theilslopes
 
 try:
     import statsmodels.api as sm
     from statsmodels.formula.api import ols
+    from statsmodels.stats.multitest import multipletests
+    from statsmodels.stats.power import TTestIndPower, FTestAnovaPower, GofChisquarePower
     STATSmodels_AVAILABLE = True
 except Exception:
     STATSmodels_AVAILABLE = False
@@ -101,7 +103,6 @@ def _levene_test(*groups):
         return np.nan, np.nan, False
 
 
-# === Interprétation automatique ===
 def interpret_bivariate_result(test_name, p_value, effect_size=None, cramers_v=None):
     alpha = 0.05
     if pd.isna(p_value):
@@ -153,7 +154,21 @@ def interpret_bivariate_result(test_name, p_value, effect_size=None, cramers_v=N
     return interpretation
 
 
-# === Fonction principale ===
+# === Bootstrap IC pour corrélations ===
+def bootstrap_ci_corr(x, y, n_boot=1000, alpha=0.05):
+    x = np.asarray(x)
+    y = np.asarray(y)
+    n = len(x)
+    corrs = []
+    for _ in range(n_boot):
+        idx = np.random.randint(0, n, n)
+        corrs.append(np.corrcoef(x[idx], y[idx])[0,1])
+    lower = np.percentile(corrs, 100*alpha/2)
+    upper = np.percentile(corrs, 100*(1-alpha/2))
+    return lower, upper
+
+
+# === Fonction principale complète ===
 def propose_tests_bivaries(types_df, distribution_df, df,
                            output_folder="tests_bivaries_plots",
                            assume_apparie_map=None,
@@ -164,7 +179,7 @@ def propose_tests_bivaries(types_df, distribution_df, df,
     if assume_apparie_map is None:
         assume_apparie_map = {}
 
-    # Normaliser les noms de colonnes
+    # Normalisation colonnes
     rename_dict = {}
     for col in types_df.columns:
         lc = col.lower()
@@ -173,7 +188,6 @@ def propose_tests_bivaries(types_df, distribution_df, df,
         if lc in {"type", "var_type", "variable_type", "kind"}:
             rename_dict[col] = "type"
     types_df = types_df.rename(columns=rename_dict)
-
     if "variable" not in types_df.columns or "type" not in types_df.columns:
         raise ValueError("types_df must contain 'variable' and 'type' columns")
 
@@ -186,7 +200,6 @@ def propose_tests_bivaries(types_df, distribution_df, df,
     # === Numérique vs Numérique ===
     for v1, v2 in itertools.combinations(num_vars, 2):
         key = f"{v1}__{v2}"
-        # align on same rows to avoid shape mismatch
         pair_df = df[[v1, v2]].dropna()
         arr1 = pair_df[v1]
         arr2 = pair_df[v2]
@@ -205,8 +218,13 @@ def propose_tests_bivaries(types_df, distribution_df, df,
             stat, p = (np.nan, np.nan)
 
         tau, p_tau = _kendall_tau(arr1, arr2)
+        ci_low, ci_high = bootstrap_ci_corr(arr1, arr2)
+        try:
+            slope, intercept, lo_slope, up_slope = theilslopes(arr2, arr1, 0.95)
+            theil_sen = {"slope": slope, "intercept": intercept, "ci_slope": (lo_slope, up_slope)}
+        except:
+            theil_sen = None
 
-        # Graphique
         plot_path = None
         try:
             fig, ax = plt.subplots(figsize=(6, 4))
@@ -222,23 +240,22 @@ def propose_tests_bivaries(types_df, distribution_df, df,
             plot_path = None
 
         interpretation = interpret_bivariate_result(test_name, p, effect_size=stat)
+        recommended_test = "Pearson" if "pearson" in test_name.lower() else "Spearman"
 
         summary_records.append({
             "test_id": key, "test": test_name, "var1": v1, "var2": v2,
-            "stat": stat, "p_value": p, "interpretation": interpretation
+            "stat": stat, "p_value": p, "interpretation": interpretation,
+            "recommended_test": recommended_test
         })
+
         details[key] = {
-            "type": "num-num",
-            "var1": v1, "var2": v2,
-            "test": test_name,
-            "statistic": float(stat) if not pd.isna(stat) else np.nan,
+            "type": "num-num", "var1": v1, "var2": v2,
+            "test": test_name, "statistic": float(stat) if not pd.isna(stat) else np.nan,
             "p_value": float(p) if not pd.isna(p) else np.nan,
-            "kendall_tau": tau,
-            "kendall_p": p_tau,
-            "plot": plot_path,
-            "interpretation": interpretation,
-            "normality_var1": norm1,
-            "normality_var2": norm2
+            "kendall_tau": tau, "kendall_p": p_tau,
+            "plot": plot_path, "interpretation": interpretation,
+            "normality_var1": norm1, "normality_var2": norm2,
+            "ci_low": ci_low, "ci_high": ci_high, "theil_sen": theil_sen
         }
 
     # === Numérique vs Catégoriel ===
@@ -247,75 +264,49 @@ def propose_tests_bivaries(types_df, distribution_df, df,
         modalities = df[cat].dropna().unique()
         n_mod = len(modalities)
         groups = [df[df[cat] == m][num].dropna().values for m in modalities]
-
         lv_stat, lv_p, equal_var = _levene_test(*[g for g in groups if len(g) > 0])
         groups_norm = all([_normality_test(pd.Series(g))["normal"] for g in groups if len(g) > 0])
 
         stat, p, effect = (np.nan, np.nan, np.nan)
         test_name = "unknown"
-
         try:
             if n_mod == 2:
-                # check pairedness map / default
                 paired = assume_apparie_map.get(key, default_apparie)
                 if paired:
-                    # align rows where both variables present
-                    df_pair = df[[num, cat]].dropna()
-                    # build paired arrays by taking rows where cat==modalities[0] or modalities[1]
-                    grp1 = df_pair[df_pair[cat] == modalities[0]][num].values
-                    grp2 = df_pair[df_pair[cat] == modalities[1]][num].values
-                    # if lengths differ, cut to min to avoid errors
+                    grp1, grp2 = groups[0], groups[1]
                     min_len = min(len(grp1), len(grp2))
-                    grp1 = grp1[:min_len]
-                    grp2 = grp2[:min_len]
+                    grp1, grp2 = grp1[:min_len], grp2[:min_len]
                     try:
                         stat, p = stats.ttest_rel(grp1, grp2)
                         test_name = "t-test (paired)"
-                    except Exception:
+                    except:
                         try:
                             stat, p = stats.wilcoxon(grp1, grp2)
                             test_name = "Wilcoxon"
-                        except Exception:
+                        except:
                             stat, p = (np.nan, np.nan)
                     effect = _cohens_d(grp1, grp2, paired=True)
                 else:
-                    # independent two groups
                     if groups_norm and equal_var:
                         test_name = "t-test"
-                        try:
-                            stat, p = stats.ttest_ind(groups[0], groups[1], equal_var=equal_var)
-                        except Exception:
-                            stat, p = (np.nan, np.nan)
-                        effect = _cohens_d(groups[0], groups[1], paired=False)
+                        stat, p = stats.ttest_ind(groups[0], groups[1], equal_var=equal_var)
+                        effect = _cohens_d(groups[0], groups[1])
                     else:
                         test_name = "Mann-Whitney"
-                        try:
-                            stat, p = stats.mannwhitneyu(groups[0], groups[1])
-                        except Exception:
-                            stat, p = (np.nan, np.nan)
+                        stat, p = stats.mannwhitneyu(groups[0], groups[1])
                         effect = _rank_biserial_from_u(stat, len(groups[0]), len(groups[1]))
             elif n_mod > 2:
                 if groups_norm and equal_var:
                     test_name = "ANOVA"
-                    try:
-                        stat, p = stats.f_oneway(*groups)
-                    except Exception:
-                        stat, p = (np.nan, np.nan)
+                    stat, p = stats.f_oneway(*groups)
                     effect = _eta_squared_anova(groups)
                 else:
                     test_name = "Kruskal-Wallis"
-                    try:
-                        stat, p = stats.kruskal(*groups)
-                    except Exception:
-                        stat, p = (np.nan, np.nan)
+                    stat, p = stats.kruskal(*groups)
                     effect = np.nan
-            else:
-                test_name = "unknown"
-                stat, p, effect = (np.nan, np.nan, np.nan)
-        except Exception:
+        except:
             stat, p, effect = (np.nan, np.nan, np.nan)
 
-        # Graphique
         plot_path = None
         try:
             fig, ax = plt.subplots(figsize=(6, 4))
@@ -325,25 +316,22 @@ def propose_tests_bivaries(types_df, distribution_df, df,
             plot_path = os.path.join(output_folder, fname)
             fig.savefig(plot_path, bbox_inches="tight")
             plt.close(fig)
-        except Exception:
+        except:
             plot_path = None
 
         interpretation = interpret_bivariate_result(test_name, p, effect_size=effect)
+        recommended_test = test_name
 
         summary_records.append({
             "test_id": key, "test": test_name, "var_num": num, "var_cat": cat,
-            "stat": stat, "p_value": p, "effect": effect, "interpretation": interpretation
+            "stat": stat, "p_value": p, "effect": effect, "interpretation": interpretation,
+            "recommended_test": recommended_test
         })
         details[key] = {
-            "type": "num-cat",
-            "var_num": num, "var_cat": cat,
-            "n_modalities": n_mod,
-            "levene_stat": lv_stat, "levene_p": lv_p, "equal_var": equal_var,
-            "test": test_name,
-            "statistic": float(stat) if not pd.isna(stat) else np.nan,
-            "p_value": float(p) if not pd.isna(p) else np.nan,
-            "effect_size": float(effect) if not pd.isna(effect) else np.nan,
-            "plot_boxplot": plot_path,
+            "type": "num-cat", "var_num": num, "var_cat": cat,
+            "n_modalities": n_mod, "levene_stat": lv_stat, "levene_p": lv_p,
+            "equal_var": equal_var, "test": test_name, "statistic": stat,
+            "p_value": p, "effect_size": effect, "plot_boxplot": plot_path,
             "interpretation": interpretation
         }
 
@@ -353,28 +341,21 @@ def propose_tests_bivaries(types_df, distribution_df, df,
         table = pd.crosstab(df[v1], df[v2])
         try:
             chi2, p_chi, dof, expected = chi2_contingency(table)
-        except Exception:
+        except:
             chi2, p_chi, dof, expected = (np.nan, np.nan, np.nan, None)
         small_expected = (expected is not None) and ((expected < 5).sum() > 0)
         if small_expected or table.shape == (2, 2):
             test_name = "Fisher exact" if table.shape == (2, 2) else "Chi2 avec prudence"
-            if table.shape == (2, 2):
-                try:
-                    stat, p = fisher_exact(table.values)
-                except Exception:
-                    stat, p = (np.nan, np.nan)
-            else:
-                stat, p = chi2, p_chi
+            stat, p = fisher_exact(table.values) if table.shape == (2, 2) else (chi2, p_chi)
         else:
             test_name = "Chi2"
             stat, p = chi2, p_chi
 
         try:
             cram = _cramers_v(table)
-        except Exception:
+        except:
             cram = np.nan
 
-        # Heatmap
         plot_path = None
         try:
             fig, ax = plt.subplots(figsize=(6, 5))
@@ -384,26 +365,28 @@ def propose_tests_bivaries(types_df, distribution_df, df,
             plot_path = os.path.join(output_folder, fname)
             fig.savefig(plot_path, bbox_inches="tight")
             plt.close(fig)
-        except Exception:
+        except:
             plot_path = None
 
         interpretation = interpret_bivariate_result(test_name, p, cramers_v=cram)
+        recommended_test = test_name
 
         summary_records.append({
             "test_id": key, "test": test_name, "var1": v1, "var2": v2,
-            "stat": stat, "p_value": p, "cramers_v": cram, "interpretation": interpretation
+            "stat": stat, "p_value": p, "cramers_v": cram, "interpretation": interpretation,
+            "recommended_test": recommended_test
         })
         details[key] = {
-            "type": "cat-cat",
-            "var1": v1, "var2": v2,
-            "contingency_table": table,
-            "test": test_name,
-            "statistic": float(stat) if not pd.isna(stat) else np.nan,
-            "p_value": float(p) if not pd.isna(p) else np.nan,
-            "cramers_v": float(cram) if not pd.isna(cram) else np.nan,
-            "plot": plot_path,
-            "interpretation": interpretation
+            "type": "cat-cat", "var1": v1, "var2": v2, "contingency_table": table,
+            "test": test_name, "statistic": stat, "p_value": p,
+            "cramers_v": cram, "plot": plot_path, "interpretation": interpretation
         }
 
     summary_df = pd.DataFrame(summary_records)
+    try:
+        corrected = multipletests(summary_df['p_value'].fillna(1), method='fdr_bh')[1]
+        summary_df['p_value_corrected'] = corrected
+    except:
+        summary_df['p_value_corrected'] = np.nan
+
     return summary_df, details
