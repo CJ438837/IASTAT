@@ -2,7 +2,7 @@ import streamlit as st
 
 def app():
     # --- Titre principal ---
-    st.title("📊 Analyse Multivariée — Théorie & Interprétation")
+    st.title("📊 Analyse Multivariée")
     st.markdown("---")
 
     # --- Objectif ---
