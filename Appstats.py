@@ -13,6 +13,8 @@ if "main_page" not in st.session_state:
     st.session_state.main_page = "Accueil"
 if "analyse_subpage" not in st.session_state:
     st.session_state.analyse_subpage = "Fichier"
+if "theorie_subpage" not in st.session_state:
+    st.session_state.theorie_subpage = "Fichier"
 
 # ======================================================
 # 🖼️ LOGO
@@ -26,16 +28,8 @@ except Exception as e:
 # ======================================================
 # 🧭 MENU HORIZONTAL
 # ======================================================
-MAIN_PAGES = ["Accueil","Théorie", "Analyse", "Contact"]
+MAIN_PAGES = ["Accueil", "Théorie", "Analyse", "Contact"]
 THEORIE_PAGES = [
-    "Variables",
-    "Descriptive",
-    "Distribution",
-    "Tests bivariés",
-    "Tests multivariés"
-]
-
-ANALYSE_PAGES = [
     "Fichier",
     "Variables",
     "Descriptive",
@@ -43,6 +37,7 @@ ANALYSE_PAGES = [
     "Tests bivariés",
     "Tests multivariés"
 ]
+ANALYSE_PAGES = THEORIE_PAGES.copy()
 
 # --- Styles CSS pour menu horizontal ---
 st.markdown("""
@@ -103,11 +98,14 @@ if st.session_state.main_page == "Accueil":
 
 elif st.session_state.main_page == "Théorie":
     st.subheader("Théorie")
+    # 🔹 Sécurité : si valeur invalide, utiliser 0
+    if st.session_state.theorie_subpage not in THEORIE_PAGES:
+        st.session_state.theorie_subpage = THEORIE_PAGES[0]
     st.session_state.theorie_subpage = st.selectbox(
-        "Choisir la section:", THEORIE_PAGES, index=THEOIRE_PAGES.index(st.session_state.theorie_subpage)
+        "Choisir la section:", THEORIE_PAGES,
+        index=THEORIE_PAGES.index(st.session_state.theorie_subpage)
     )
 
-    # Charger la sous-page sélectionnée
     sub = st.session_state.theorie_subpage
     if sub == "Variables":
         from Pages import page_variablesT
@@ -127,11 +125,14 @@ elif st.session_state.main_page == "Théorie":
 
 elif st.session_state.main_page == "Analyse":
     st.subheader("Analyse")
+    # 🔹 Sécurité : si valeur invalide, utiliser 0
+    if st.session_state.analyse_subpage not in ANALYSE_PAGES:
+        st.session_state.analyse_subpage = ANALYSE_PAGES[0]
     st.session_state.analyse_subpage = st.selectbox(
-        "Choisir l'analyse :", ANALYSE_PAGES, index=ANALYSE_PAGES.index(st.session_state.analyse_subpage)
+        "Choisir l'analyse :", ANALYSE_PAGES,
+        index=ANALYSE_PAGES.index(st.session_state.analyse_subpage)
     )
 
-    # Charger la sous-page sélectionnée
     sub = st.session_state.analyse_subpage
     if sub == "Fichier":
         from Pages import page_fichier
@@ -155,6 +156,3 @@ elif st.session_state.main_page == "Analyse":
 elif st.session_state.main_page == "Contact":
     from Pages import page_contact
     page_contact.app()
-
-
-
