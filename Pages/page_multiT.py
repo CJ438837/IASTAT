@@ -21,82 +21,76 @@ def app():
 
     # --- 1. PCA ---
     st.subheader("🔷 1. Analyse en Composantes Principales (PCA)")
-    with st.expander("📌 Théorie PCA"):
-        st.markdown("""
-        - Destinée aux variables **numériques**  
-        - Réduit la dimensionnalité tout en conservant la variance maximale  
-        - Les axes principaux (PC1, PC2…) représentent des combinaisons linéaires des variables initiales  
-        - Permet de visualiser clusters et tendances dans les données  
-        - **Interprétation** : pourcentage de variance expliquée par chaque composante
-        """)
+    st.markdown("""
+    - Destinée aux variables **numériques**  
+    - Réduit la dimensionnalité tout en conservant la variance maximale  
+    - Les axes principaux (PC1, PC2…) représentent des combinaisons linéaires des variables initiales  
+    - Permet de visualiser clusters et tendances dans les données  
+    - **Interprétation** : pourcentage de variance expliquée par chaque composante
+    """)
 
     st.markdown("---")
 
     # --- 2. MCA ---
     st.subheader("🔷 2. Analyse des Correspondances Multiples (MCA)")
-    with st.expander("📌 Théorie MCA"):
-        st.markdown("""
-        - Destinée aux variables **catégorielles**  
-        - Identifie les associations entre modalités  
-        - Réduit la dimensionnalité pour visualiser les relations  
-        - Utile pour explorer questionnaires ou tableaux de contingence complexes  
-        - **Interprétation** : coordonnées des individus et des modalités sur les axes factoriels
-        """)
+    st.markdown("""
+    - Destinée aux variables **catégorielles**  
+    - Identifie les associations entre modalités  
+    - Réduit la dimensionnalité pour visualiser les relations  
+    - Utile pour explorer questionnaires ou tableaux de contingence complexes  
+    - **Interprétation** : coordonnées des individus et des modalités sur les axes factoriels
+    """)
 
     st.markdown("---")
 
     # --- 3. FAMD ---
     st.subheader("🔷 3. Analyse Factorielle Mixte (FAMD)")
-    with st.expander("📌 Théorie FAMD"):
-        st.markdown("""
-        - Destinée aux jeux de données **mixtes** (numériques + catégorielles)  
-        - Combine PCA et MCA pour représenter toutes les variables sur un plan commun  
-        - Permet d’identifier des groupes ou des patterns globaux  
-        - **Interprétation** : corrélation des variables numériques et contribution des modalités catégorielles
-        """)
+    st.markdown("""
+    - Destinée aux jeux de données **mixtes** (numériques + catégorielles)  
+    - Combine PCA et MCA pour représenter toutes les variables sur un plan commun  
+    - Permet d’identifier des groupes ou des patterns globaux  
+    - **Interprétation** : corrélation des variables numériques et contribution des modalités catégorielles
+    """)
 
     st.markdown("---")
 
     # --- 4. MANOVA ---
     st.subheader("🔷 4. MANOVA (Analyse Multivariée de Variance)")
-    with st.expander("📌 Théorie MANOVA"):
-        st.markdown("""
-        - Étend l’ANOVA à **plusieurs variables dépendantes simultanément**  
-        - Vérifie si les groupes définis par les variables explicatives ont un effet global significatif  
-        - Statistiques multivariées utilisées : Wilks’ Lambda, Pillai’s Trace, Hotelling-Lawley Trace  
-        - **Interprétation** : p-value < 0.05 → effet global significatif des facteurs
-        """)
+    st.markdown("""
+    - Étend l’ANOVA à **plusieurs variables dépendantes simultanément**  
+    - Vérifie si les groupes définis par les variables explicatives ont un effet global significatif  
+    - Statistiques multivariées utilisées : Wilks’ Lambda, Pillai’s Trace, Hotelling-Lawley Trace  
+    - **Interprétation** : p-value < 0.05 → effet global significatif des facteurs
+    """)
 
     st.markdown("---")
 
     # --- 5. Régression multiple et diagnostic des résidus ---
     st.subheader("🔷 5. Régression multiple et diagnostic des résidus")
-    with st.expander("📌 Régression multiple"):
-        st.markdown("""
-        - Modélise l’influence de **plusieurs variables explicatives** sur une variable cible  
-        - Fournit coefficients, intervalles de confiance et p-values  
-        - Permet de prédire et d’évaluer l’effet relatif des variables
-        """)
-    with st.expander("📌 Analyse des résidus"):
-        st.markdown("""
-        - Vérifie les hypothèses du modèle :  
-            - Normalité des résidus (Shapiro-Wilk)  
-            - Homoscédasticité (Breusch-Pagan)  
-            - QQ-plot pour détecter des écarts aux hypothèses  
-        - Permet de valider la qualité de la régression et de détecter des outliers
-        """)
+    st.markdown("""
+    **Régression multiple :**
+    - Modélise l’influence de **plusieurs variables explicatives** sur une variable cible  
+    - Fournit coefficients, intervalles de confiance et p-values  
+    - Permet de prédire et d’évaluer l’effet relatif des variables
+
+    **Analyse des résidus :**
+    - Vérifie les hypothèses du modèle :  
+        - Normalité des résidus (Shapiro-Wilk)  
+        - Homoscédasticité (Breusch-Pagan)  
+        - QQ-plot pour détecter des écarts aux hypothèses  
+    - Permet de valider la qualité de la régression et de détecter des outliers
+    """)
 
     st.markdown("---")
 
     # --- 6. Corrélations multiples ---
     st.subheader("🔷 6. Corrélations multiples")
-    with st.expander("📌 Théorie corrélations"):
-        st.markdown("""
-        - Étudie les relations entre toutes les variables numériques simultanément  
-        - Matrice de corrélation visualisée par carte de chaleur (heatmap)  
-        - Permet d’identifier des variables fortement liées ou redondantes  
-        - **Interprétation** : coefficients proches de ±1 indiquent une forte corrélation
-        """)
+    st.markdown("""
+    - Étudie les relations entre toutes les variables numériques simultanément  
+    - Matrice de corrélation visualisée par carte de chaleur (heatmap)  
+    - Permet d’identifier des variables fortement liées ou redondantes  
+    - **Interprétation** : coefficients proches de ±1 indiquent une forte corrélation
+    """)
 
     st.markdown("---")
 
