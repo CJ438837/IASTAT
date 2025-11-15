@@ -14,12 +14,6 @@ def app():
     Cette section décrit les principes théoriques derrière le fonctionnement du module d'analyse descriptive de l’application.
     """)
 
-    # --- Illustration/logo section (optionnel) ---
-    try:
-        img = Image.open("assets/analyse_descriptive.png")
-        st.image(img, use_column_width=True)
-    except:
-        pass
 
     st.markdown("---")
 
