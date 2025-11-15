@@ -1,94 +1,89 @@
 import streamlit as st
-from PIL import Image
 
 def app():
+    st.title("📊 Analyse des Distributions — Théorie & Interprétation")
+    st.markdown("---")
 
-    # --- Titre principal ---
-    st.title("📊 Analyse Descriptive — Théorie")
-
-    # --- Introduction ---
+    st.subheader("🎯 Objectif")
     st.markdown("""
-    L’analyse descriptive constitue la première étape essentielle de toute étude statistique.  
-    Son objectif est de **résumer, structurer et comprendre les données** avant d’entreprendre des analyses plus complexes.
-
-    Cette section décrit les principes théoriques derrière le fonctionnement du module d'analyse descriptive de l’application.
+    L’analyse des distributions permet de comprendre **la forme et le comportement des variables numériques** avant toute analyse statistique avancée.  
+    Elle aide à :
+    - Vérifier l’hypothèse de normalité pour appliquer les tests paramétriques
+    - Identifier des distributions sous-jacentes pour modélisation ou simulation
+    - Détecter des valeurs extrêmes ou anomalies
     """)
 
     st.markdown("---")
+    st.header("🔹 1. Tests de normalité")
+    with st.expander("📌 Théorie des tests de normalité"):
+        st.markdown("""
+        Plusieurs tests permettent de vérifier si une variable suit une **distribution normale** :
 
-    # --- Variables numériques ---
-    st.subheader("🔢 1. Variables numériques")
+        - **Shapiro-Wilk** : recommandé pour des échantillons de petite taille (< 5000 observations)  
+          - H0 : les données suivent une distribution normale  
+          - H1 : les données ne sont pas normales  
+          - p-value > 0.05 → normalité acceptée
+          
+        - **Kolmogorov-Smirnov (KS)** : utilisé pour des échantillons plus grands  
+          - Compare la distribution empirique avec une distribution théorique (ex. normale)  
+          - Même interprétation pour la p-value
+
+        **Verdict** : Normal / Non Normal
+        """)
+
+    st.markdown("---")
+    st.header("🔹 2. Détection de la distribution probable")
+    with st.expander("📌 Théorie des distributions"):
+        st.markdown("""
+        Une fois la normalité évaluée, il est utile de proposer la **distribution statistique la plus probable** :
+
+        - **Variables discrètes** : Poisson, Binomiale  
+        - **Variables continues** : Normale, Exponentielle, Log-normale, Uniforme  
+
+        Le choix de la distribution permet de :
+        - Adapter les modèles statistiques et simulations
+        - Générer des données synthétiques réalistes
+        - Comprendre la variabilité et la forme des données
+
+        ⚡ **Outils utilisés** : bibliothèques de fit automatique comme `Fitter` en Python.
+        """)
+
+    st.markdown("---")
+    st.header("🔹 3. Visualisations")
+    with st.expander("📌 Théorie des graphiques"):
+        st.markdown("""
+        Pour chaque variable numérique, l’application produit deux types de graphiques :
+
+        1. **Histogramme + KDE (Kernel Density Estimate)**  
+           - Histogramme : distribution empirique des données  
+           - KDE : estimation de la densité de probabilité continue  
+           - Permet de visualiser asymétrie, pics et étendue des valeurs
+
+        2. **QQ-plot (Quantile-Quantile plot)**  
+           - Compare les quantiles des données avec ceux d’une distribution normale  
+           - Les points proches de la diagonale → normalité approximative  
+           - Détecte les écarts et valeurs extrêmes
+
+        Ces visualisations aident à **valider visuellement la normalité** et à détecter des anomalies.
+        """)
+
+    st.markdown("---")
+    st.subheader("💡 Bonnes pratiques")
     st.markdown("""
-    Pour les variables numériques, plusieurs statistiques sont automatiquement calculées :
-
-    ### Statistiques de tendance centrale
-    - **Moyenne** : mesure la valeur centrale moyenne.
-    - **Médiane** : valeur centrale robuste aux valeurs extrêmes.
-
-    ### Statistiques de dispersion
-    - **Min / Max** : étendue des valeurs.
-    - **Écart-type (std)** : variabilité autour de la moyenne.
-    - **Variance** : carré de l’écart-type.
-    - **Quartiles (Q1, Q2, Q3)** : répartition de la distribution.
-    - **Coefficient de variation (CV)** : `std / moyenne` — utile pour comparer des variables de natures différentes.
-
-    ### Mesures de forme
-    - **Asymétrie (Skewness)** : indique si la distribution est inclinée à gauche ou à droite.
-    - **Kurtosis (Aplatissement)** : indique si la distribution est plus ou moins concentrée que la normale.
-
-    Ces mesures permettent de **diagnostiquer la distribution**, notamment :
-    - la présence de valeurs extrêmes,
-    - la symétrie ou non des données,
-    - la régularité ou dispersion d’une variable.
+    - Toujours examiner à la fois les **tests statistiques** et les **visualisations**  
+    - Pour des grands échantillons (>5000), privilégier KS plutôt que Shapiro  
+    - Pour des variables discrètes, adapter les distributions testées (Poisson, Binomiale)  
+    - Vérifier les valeurs aberrantes qui peuvent biaiser les tests et les fit
     """)
 
     st.markdown("---")
-
-    # --- Variables catégorielles ou binaires ---
-    st.subheader("🧩 2. Variables catégorielles ou binaires")
+    st.subheader("🎓 Conclusion")
     st.markdown("""
-    Pour les variables catégorielles ou binaires, l’analyse descriptive repose sur les **comptages** et **fréquences**.
-
-    ### Statistiques calculées
-    - **Effectifs de chaque modalité**
-    - **Fréquences relatives (%)**
-    - **Détection des modalités rares** :  
-      Une modalité est considérée **rare** si elle apparaît dans **moins de 5%** des observations.
-
-    L’identification des modalités rares est importante car :
-    - elles peuvent biaiser certains tests statistiques,
-    - elles peuvent indiquer un regroupement nécessaire,
-    - elles impactent la stabilité des modèles prédictifs.
+    L’analyse avancée des distributions permet de **diagnostiquer la forme des données numériques**, de détecter des anomalies et de proposer la distribution statistique la plus probable.  
+    Ces informations sont essentielles pour :
+    - choisir les tests statistiques appropriés  
+    - préparer des modèles de simulation ou prédiction  
+    - interpréter correctement les résultats des analyses
     """)
 
-    st.markdown("---")
-
-    # --- Traitement automatique selon le type de variable ---
-    st.subheader("🧪 3. Traitement automatique selon le type de variable")
-    st.markdown("""
-    L’application détecte automatiquement le type de chaque variable et applique les règles suivantes :
-
-    - **Numérique → calcul complet des statistiques**  
-    - **Catégorielle / Binaire → comptages, pourcentages et détection des modalités rares**  
-    - **Autre → indication qu’aucune analyse standard n’est disponible**
-
-    Cette automatisation permet d’obtenir rapidement :
-    - un **résumé clair des données**,  
-    - une **vue d’ensemble fiable** avant de poursuivre vers des tests statistiques.
-    """)
-
-    st.markdown("---")
-
-    # --- Conseils pratiques ---
-    st.subheader("💡 Conseils pratiques")
-    st.markdown("""
-    - Vérifiez toujours si les résultats calculés correspondent à votre logique métier  
-    - Attention aux variables numériques codées en texte (ex. `"10"`)  
-    - Les variables numériques avec peu de valeurs uniques peuvent être recodées en catégories si nécessaire  
-    - Utilisez ces analyses descriptives pour détecter anomalies et tendances avant tests statistiques ou modélisation
-    """)
-
-    st.markdown("---")
-
-    # --- Footer ---
     st.markdown("© 2025 Corvus Analytics - Tous droits réservés")
