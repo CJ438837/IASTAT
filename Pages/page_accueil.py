@@ -1,7 +1,7 @@
 import streamlit as st
 
 def app():
-    st.title("🏠 Accueil — Appstats")
+    st.title("🏠 Accueil")
 
     st.markdown("""
     **Bienvenue sur Appstats, votre application d'analyse statistique automatisée.**
@@ -52,3 +52,4 @@ def app():
 
     st.markdown("---")
     st.markdown("© 2025 Corvus Analytics - Tous droits réservés")
+
