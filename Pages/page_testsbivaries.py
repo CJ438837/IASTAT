@@ -176,7 +176,9 @@ def app():
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if st.button("➡️ Page suivante : Tests multivariés"):
-            st.session_state.target_page = "Tests multivariés"
+            st.session_state.main_page = "Analyse"
+            st.session_state.analyse_subpage = "Tests multivariés"
+
 
 
 
