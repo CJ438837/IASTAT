@@ -11,7 +11,7 @@ plt.style.use("seaborn-v0_8-muted")
 def app():
     st.title("Tests statistiques bivariés")
     st.markdown("""
-    **Etudions l'impact des variables les une sur les autres.**
+    **Étudions l'impact des variables les unes sur les autres.**
     **Ici l'étude se fait avec une variable dépendante et une variable explicative.**
     **Voyons ce qu'il en ressort avec les résultats des tests et des illustrations graphiques**
     """)
@@ -47,16 +47,12 @@ def app():
         st.warning("⚠️ Veuillez sélectionner deux variables différentes.")
         st.stop()
 
-    # --- Détection automatique du type (sécurité si variable non trouvée) ---
+    # --- Détection automatique du type ---
     try:
         type1 = types_df.loc[types_df["variable"] == var1, "type"].values[0]
-    except Exception:
-        st.error(f"Le type pour la variable `{var1}` n'a pas été trouvé dans types_df.")
-        st.stop()
-    try:
         type2 = types_df.loc[types_df["variable"] == var2, "type"].values[0]
-    except Exception:
-        st.error(f"Le type pour la variable `{var2}` n'a pas été trouvé dans types_df.")
+    except Exception as e:
+        st.error(f"Erreur lors de la détection des types : {e}")
         st.stop()
 
     st.markdown(f"**Types détectés :** `{var1}` → **{type1}**, `{var2}` → **{type2}**")
@@ -70,33 +66,25 @@ def app():
     else:
         st.info("Chi² / Fisher seront considérés pour des variables catégorielles.")
 
-    # --- Exécution du test (bouton) ---
+    # --- Exécution du test ---
     if st.button("🧪 Exécuter le test sélectionné"):
         with st.spinner("Exécution du test... ⏳"):
             try:
-                # --- APPEL inchangé de la fonction existante (signature actuelle) ---
                 summary_df, details = propose_tests_bivaries(
                     types_df=types_df,
                     distribution_df=distribution_df,
                     df=df,
                     default_apparie=apparie
                 )
-            except TypeError as te:
-                st.error(f"Erreur d'appel de propose_tests_bivaries(): {te}")
-                return
             except Exception as e:
                 st.error(f"Erreur lors de l'exécution des tests : {e}")
                 return
 
-            # --- On récupère la clé correspondant à la paire choisie ---
+            # --- Récupération de la clé ---
             key = f"{var1}__{var2}"
-            # function may use either order v1__v2 or v2__v1 depending on implementation;
-            # try both orders
-            if key not in details:
-                alt_key = f"{var2}__{var1}"
-                if alt_key in details:
-                    key = alt_key
-
+            alt_key = f"{var2}__{var1}"
+            if key not in details and alt_key in details:
+                key = alt_key
             if key not in details:
                 st.warning("⚠️ Test non trouvé dans les résultats générés pour cette paire de variables.")
                 st.write("Clés disponibles :", list(details.keys())[:20])
@@ -104,72 +92,47 @@ def app():
 
             test_detail = details[key]
 
-            # --- 1) Affichage synthétique du résultat (tableau unique) ---
+            # --- 1) Résumé synthétique ---
             st.subheader("📋 Résumé du test")
-            # Compose a small dataframe summarizing the most useful fields
             summary_record = {
                 "Test": test_detail.get("test", None),
                 "Statistique": test_detail.get("statistic", test_detail.get("stat", None)),
                 "p-value": test_detail.get("p_value", test_detail.get("p", None)),
+                "p-value corrigée": test_detail.get("p_value_corrected", None),
                 "Effect size": test_detail.get("effect_size", test_detail.get("effect", None)),
-                "Cramers V": test_detail.get("cramers_v", None)
+                "Cramers V": test_detail.get("cramers_v", None),
+                "Test recommandé": test_detail.get("recommended_test", None)
             }
             st.table(pd.DataFrame([summary_record]))
 
-            # --- 2) Afficher détails complémentaires si présents ---
+            # --- 2) Détails complémentaires ---
             st.subheader("🔎 Détails")
-            # Normality info if present
             if "normality_var1" in test_detail or "normality_var2" in test_detail:
                 st.markdown("**Tests de normalité :**")
                 st.write(test_detail.get("normality_var1", "—"))
                 st.write(test_detail.get("normality_var2", "—"))
 
-            if "normality_groups" in test_detail:
-                st.markdown("**Normalité par groupe :**")
-                st.json(test_detail["normality_groups"])
+            if "ci_low" in test_detail and "ci_high" in test_detail:
+                st.markdown("**Intervalle de confiance bootstrap (corrélations) :**")
+                st.write(f"[{test_detail['ci_low']:.3f}, {test_detail['ci_high']:.3f}]")
 
-        
-            # --- 3) Affichage graphique associé (boxplot / heatmap / scatter) ---
+            if "theil_sen" in test_detail and test_detail["theil_sen"]:
+                ts = test_detail["theil_sen"]
+                st.markdown("**Pente Theil-Sen robuste :**")
+                st.write(f"Slope = {ts['slope']:.3f}, Intercept = {ts['intercept']:.3f}, CI slope = {ts['ci_slope']}")
+
+            # --- 3) Graphique associé ---
             st.subheader("📊 Graphique associé")
-            plot_path = test_detail.get("plot") or test_detail.get("plot_boxplot") or test_detail.get("plot_boxplot_png") or test_detail.get("plot_png")
-            if plot_path:
-                # If function saved a path to file
-                try:
-                    if isinstance(plot_path, (list, tuple)):
-                        # defensive: if it's a list, take first
-                        plot_path = plot_path[0]
-                    if os.path.exists(plot_path):
-                        st.image(plot_path, use_column_width=True)
-                    else:
-                        # maybe the function returned a Matplotlib figure object
-                        if hasattr(plot_path, "savefig"):
-                            st.pyplot(plot_path)
-                        else:
-                            st.write("Chemin de l'image non trouvé :", plot_path)
-                except Exception:
-                    # fallback: if 'fig' key exists and is a matplotlib Figure
-                    fig = test_detail.get("fig", None)
-                    if fig is not None:
-                        st.pyplot(fig)
-                    else:
-                        st.info("Aucun graphique disponible.")
+            plot_path = test_detail.get("plot") or test_detail.get("plot_boxplot")
+            if plot_path and os.path.exists(plot_path):
+                st.image(plot_path, use_column_width=True)
             else:
-                # try fig object directly
-                fig = test_detail.get("fig", None)
-                if fig is not None:
-                    st.pyplot(fig)
-                else:
-                    st.info("Aucun graphique disponible pour ce test.")
+                st.info("Aucun graphique disponible pour ce test.")
 
-            # --- 4) Affichage de la table de contingence si présente ---
+            # --- 4) Table de contingence si présente ---
             if "contingency_table" in test_detail:
                 st.subheader("🧾 Table de contingence")
-                try:
-                    st.dataframe(test_detail["contingency_table"])
-                except Exception:
-                    st.write(test_detail["contingency_table"])
-
-    
+                st.dataframe(test_detail["contingency_table"])
 
     # --- Navigation vers multivariés ---
     st.markdown("---")
@@ -178,8 +141,3 @@ def app():
         if st.button("➡️ Page suivante : Tests multivariés"):
             st.session_state.main_page = "Analyse"
             st.session_state.analyse_subpage = "Tests multivariés"
-
-
-
-
-
