@@ -15,57 +15,54 @@ def app():
 
     st.markdown("---")
     st.header("🔹 1. Tests de normalité")
-    with st.expander("📌 Théorie des tests de normalité"):
-        st.markdown("""
-        Plusieurs tests permettent de vérifier si une variable suit une **distribution normale** :
+    st.markdown("""
+    Plusieurs tests permettent de vérifier si une variable suit une **distribution normale** :
 
-        - **Shapiro-Wilk** : recommandé pour des échantillons de petite taille (< 5000 observations)  
-          - H0 : les données suivent une distribution normale  
-          - H1 : les données ne sont pas normales  
-          - p-value > 0.05 → normalité acceptée
+    - **Shapiro-Wilk** : recommandé pour des échantillons de petite taille (< 5000 observations)  
+      - H0 : les données suivent une distribution normale  
+      - H1 : les données ne sont pas normales  
+      - p-value > 0.05 → normalité acceptée
           
-        - **Kolmogorov-Smirnov (KS)** : utilisé pour des échantillons plus grands  
-          - Compare la distribution empirique avec une distribution théorique (ex. normale)  
-          - Même interprétation pour la p-value
+    - **Kolmogorov-Smirnov (KS)** : utilisé pour des échantillons plus grands  
+      - Compare la distribution empirique avec une distribution théorique (ex. normale)  
+      - Même interprétation pour la p-value
 
-        **Verdict** : Normal / Non Normal
-        """)
+    **Verdict** : Normal / Non Normal
+    """)
 
     st.markdown("---")
     st.header("🔹 2. Détection de la distribution probable")
-    with st.expander("📌 Théorie des distributions"):
-        st.markdown("""
-        Une fois la normalité évaluée, il est utile de proposer la **distribution statistique la plus probable** :
+    st.markdown("""
+    Une fois la normalité évaluée, il est utile de proposer la **distribution statistique la plus probable** :
 
-        - **Variables discrètes** : Poisson, Binomiale  
-        - **Variables continues** : Normale, Exponentielle, Log-normale, Uniforme  
+    - **Variables discrètes** : Poisson, Binomiale  
+    - **Variables continues** : Normale, Exponentielle, Log-normale, Uniforme  
 
-        Le choix de la distribution permet de :
-        - Adapter les modèles statistiques et simulations
-        - Générer des données synthétiques réalistes
-        - Comprendre la variabilité et la forme des données
+    Le choix de la distribution permet de :
+    - Adapter les modèles statistiques et simulations
+    - Générer des données synthétiques réalistes
+    - Comprendre la variabilité et la forme des données
 
-        ⚡ **Outils utilisés** : bibliothèques de fit automatique comme `Fitter` en Python.
-        """)
+    ⚡ **Outils utilisés** : bibliothèques de fit automatique comme `Fitter` en Python.
+    """)
 
     st.markdown("---")
     st.header("🔹 3. Visualisations")
-    with st.expander("📌 Théorie des graphiques"):
-        st.markdown("""
-        Pour chaque variable numérique, l’application produit deux types de graphiques :
+    st.markdown("""
+    Pour chaque variable numérique, l’application produit deux types de graphiques :
 
-        1. **Histogramme + KDE (Kernel Density Estimate)**  
-           - Histogramme : distribution empirique des données  
-           - KDE : estimation de la densité de probabilité continue  
-           - Permet de visualiser asymétrie, pics et étendue des valeurs
+    1. **Histogramme + KDE (Kernel Density Estimate)**  
+       - Histogramme : distribution empirique des données  
+       - KDE : estimation de la densité de probabilité continue  
+       - Permet de visualiser asymétrie, pics et étendue des valeurs
 
-        2. **QQ-plot (Quantile-Quantile plot)**  
-           - Compare les quantiles des données avec ceux d’une distribution normale  
-           - Les points proches de la diagonale → normalité approximative  
-           - Détecte les écarts et valeurs extrêmes
+    2. **QQ-plot (Quantile-Quantile plot)**  
+       - Compare les quantiles des données avec ceux d’une distribution normale  
+       - Les points proches de la diagonale → normalité approximative  
+       - Détecte les écarts et valeurs extrêmes
 
-        Ces visualisations aident à **valider visuellement la normalité** et à détecter des anomalies.
-        """)
+    Ces visualisations aident à **valider visuellement la normalité** et à détecter des anomalies.
+    """)
 
     st.markdown("---")
     st.subheader("💡 Bonnes pratiques")
