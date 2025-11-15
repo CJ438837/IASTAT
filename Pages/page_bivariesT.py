@@ -2,7 +2,7 @@ import streamlit as st
 
 def app():
     # --- Titre principal ---
-    st.title("📊 Tests Bivariés — Théorie & Interprétation")
+    st.title("📊 Tests Bivariés")
     st.markdown("---")
 
     # --- Objectif ---
