@@ -36,7 +36,14 @@ THEORIE_PAGES = [
     "Tests bivariés",
     "Tests multivariés"
 ]
-ANALYSE_PAGES = THEORIE_PAGES.copy()
+ANALYSE_PAGES = [
+    "Fichier",
+    "Variables",
+    "Descriptive",
+    "Distribution",
+    "Tests bivariés",
+    "Tests multivariés"
+]
 
 # --- Styles CSS pour menu horizontal ---
 st.markdown("""
@@ -155,4 +162,5 @@ elif st.session_state.main_page == "Analyse":
 elif st.session_state.main_page == "Contact":
     from Pages import page_contact
     page_contact.app()
+
 
