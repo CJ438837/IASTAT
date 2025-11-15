@@ -4,7 +4,7 @@ from PIL import Image
 def app():
 
     # --- Titre principal ---
-    st.title("📊 Analyse Descriptive — Théorie")
+    st.title("📊 Analyse Descriptive")
 
     # --- Introduction ---
     st.markdown("""
