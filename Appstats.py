@@ -28,7 +28,6 @@ except Exception as e:
 # ======================================================
 MAIN_PAGES = ["Accueil","Théorie", "Analyse", "Contact"]
 THEORIE_PAGES = [
-    "Fichier",
     "Variables",
     "Descriptive",
     "Distribution",
@@ -156,5 +155,6 @@ elif st.session_state.main_page == "Analyse":
 elif st.session_state.main_page == "Contact":
     from Pages import page_contact
     page_contact.app()
+
 
 
