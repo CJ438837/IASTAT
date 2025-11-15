@@ -5,9 +5,7 @@ from modules.IA_STAT_testmultivaries import propose_tests_multivariés
 
 plt.style.use("seaborn-v0_8-muted")
 
-
 def app():
-
     # --- 🎨 Thème Corvus ---
     try:
         with open("assets/corvus_theme.css") as f:
@@ -19,13 +17,14 @@ def app():
     st.markdown("<h1 class='corvus-title'> Tests Multivariés Avancés</h1>", unsafe_allow_html=True)
     st.markdown("""
     **Passons maintenant aux interactions plus complexes !**  
-    **Ici l'étude se fait avec une variable dépendante et plusieurs variables explicatives.**
+    Ici l'analyse implique une **variable dépendante** et **plusieurs variables explicatives**, contrairement aux tests bivariés.
     """)
 
     # --- 1️⃣ Vérification des prérequis ---
     if "df_selected" not in st.session_state or st.session_state["df_selected"] is None:
         st.warning("⚠️ Veuillez d'abord charger un fichier dans l'onglet **Fichier**.")
         st.stop()
+
     df = st.session_state["df_selected"]
 
     if "types_df" not in st.session_state or st.session_state["types_df"] is None:
@@ -42,22 +41,24 @@ def app():
 
     st.success(f"✅ Données disponibles : {df.shape[0]} lignes, {df.shape[1]} colonnes")
 
-    # --- 2️⃣ Aperçu ---
+    # --- 2️⃣ Aperçu des données ---
     st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
     st.markdown("### 📋 Aperçu du jeu de données")
     st.dataframe(df.head(), use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- 3️⃣ Sélection ---
+    # --- 3️⃣ Sélection des variables ---
     st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
-    st.markdown("### 🎯 Sélection des variables")
+    st.markdown("### 🎯 Sélection des variables à inclure dans l'analyse")
 
     target_var = st.selectbox("Variable à expliquer :", df.columns)
+
     explicatives = st.multiselect(
         "Variables explicatives :",
         [c for c in df.columns if c != target_var],
         default=[]
     )
+
     st.markdown("</div>", unsafe_allow_html=True)
 
     if not explicatives:
@@ -66,7 +67,7 @@ def app():
 
     # --- 4️⃣ Lancer les tests ---
     st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
-    st.markdown("### 📈 Lancez l'analyse multivariée")
+    st.markdown("### 📈 Lancer les tests multivariés")
 
     if st.button("📈 Démarrer l'analyse multivariée", use_container_width=True):
         with st.spinner("Analyse en cours..."):
@@ -78,12 +79,17 @@ def app():
                     explicatives=explicatives
                 )
 
-                # --- Boucle sur les résultats ---
                 for res in results:
+
+                    # 🔍 Sécurité : ignorer les résultats non conformes
+                    if not isinstance(res, dict):
+                        st.warning(f"⚠️ Résultat inattendu ignoré : {res}")
+                        continue
+
                     st.divider()
                     st.subheader(f"🧩 {res.get('test', 'Test inconnu')}")
 
-                    # ⚠️ Gestion d'erreur
+                    # Gestion des erreurs
                     if "error" in res:
                         st.error(f"❌ Erreur : {res['error']}")
                         continue
@@ -91,47 +97,45 @@ def app():
                         st.warning(res["message"])
                         continue
 
-                    # 📄 Résultats tabulaires
-                    result_df = res.get("result_df")
-                    if isinstance(result_df, pd.DataFrame) and not result_df.empty:
-                        st.markdown("#### 📊 Tableau de résultats")
-                        st.dataframe(result_df, use_container_width=True)
+                    # Résultats tabulaires
+                    if isinstance(res.get("result_df"), pd.DataFrame) and not res["result_df"].empty:
+                        st.dataframe(res["result_df"], use_container_width=True)
 
-                    # 📊 Graphique
-                    fig = res.get("fig")
-                    if fig is not None:
-                        st.markdown("#### 📈 Graphique associé")
-                        st.pyplot(fig)
+                    # Graphique associé
+                    if res.get("fig") is not None:
+                        st.pyplot(res["fig"])
 
-                    # 🔍 Informations avancées
-                    if "info" in res and res["info"]:
-                        st.markdown("#### 🧠 Informations additionnelles")
-                        info = res["info"]
+                    # --- 📌 Informations additionnelles (format propre) ---
+                    additional = res.get("additional_info")
+                    if isinstance(additional, dict) and additional:
+                        st.markdown("<div class='corvus-subcard'>", unsafe_allow_html=True)
+                        st.markdown("#### 📌 Informations complémentaires")
 
-                        # JSON propre + conversion numpy -> python
-                        clean_info = {}
+                        col1, col2 = st.columns(2)
+                        items = list(additional.items())
 
-                        for k, v in info.items():
-                            try:
-                                if isinstance(v, pd.DataFrame):
-                                    clean_info[k] = v.to_dict(orient="records")
-                                elif hasattr(v, "tolist"):
-                                    clean_info[k] = v.tolist()
-                                else:
-                                    clean_info[k] = v
-                            except Exception:
-                                clean_info[k] = str(v)
+                        for i, (label, value) in enumerate(items):
+                            target_col = col1 if i % 2 == 0 else col2
+                            target_col.markdown(
+                                f"""
+                                <div class='corvus-info'>
+                                    <b>{label}</b><br>
+                                    <span>{value}</span>
+                                </div>
+                                """,
+                                unsafe_allow_html=True
+                            )
 
-                        st.json(clean_info)
+                        st.markdown("</div>", unsafe_allow_html=True)
 
-                    # 💬 Interprétation auto
-                    if "interpretation" in res and res["interpretation"]:
+                    # Interprétation automatique
+                    if res.get("interpretation"):
                         st.markdown(
                             f"<div class='corvus-interpretation'><b>Interprétation :</b> {res['interpretation']}</div>",
                             unsafe_allow_html=True
                         )
 
             except Exception as e:
-                st.error(f"❌ Une erreur est survenue : {e}")
+                st.error(f"❌ Une erreur est survenue pendant l'exécution : {e}")
 
     st.markdown("</div>", unsafe_allow_html=True)
