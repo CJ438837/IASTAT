@@ -32,7 +32,7 @@ def app():
 
     ---
     
-    ## 💡 Pourquoi utiliser Appstats ?
+    ## 💡 Pourquoi utiliser Corvus Analytics ?
 
     - **Gagnez du temps** sur la préparation et l’analyse des données.  
     - **Minimisez les erreurs** grâce à l’automatisation des tests et calculs statistiques.  
@@ -52,4 +52,5 @@ def app():
 
     st.markdown("---")
     st.markdown("© 2025 Corvus Analytics - Tous droits réservés")
+
 
