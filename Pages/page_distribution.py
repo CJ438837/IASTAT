@@ -124,7 +124,9 @@ def app():
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if st.button("➡️ Passer à la page Tests bivariés", use_container_width=True):
-               st.session_state.target_page = "Tests bivariés"
+               st.session_state.main_page = "Analyse"
+               st.session_state.analyse_subpage = "Tests bivariés"
+
 
 
 
