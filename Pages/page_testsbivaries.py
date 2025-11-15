@@ -50,9 +50,13 @@ def app():
     # --- Détection automatique du type ---
     try:
         type1 = types_df.loc[types_df["variable"] == var1, "type"].values[0]
+    except Exception:
+        st.error(f"Le type pour la variable `{var1}` n'a pas été trouvé dans types_df.")
+        st.stop()
+    try:
         type2 = types_df.loc[types_df["variable"] == var2, "type"].values[0]
-    except Exception as e:
-        st.error(f"Erreur lors de la détection des types : {e}")
+    except Exception:
+        st.error(f"Le type pour la variable `{var2}` n'a pas été trouvé dans types_df.")
         st.stop()
 
     st.markdown(f"**Types détectés :** `{var1}` → **{type1}**, `{var2}` → **{type2}**")
@@ -66,7 +70,7 @@ def app():
     else:
         st.info("Chi² / Fisher seront considérés pour des variables catégorielles.")
 
-    # --- Exécution du test ---
+    # --- Exécution du test (bouton) ---
     if st.button("🧪 Exécuter le test sélectionné"):
         with st.spinner("Exécution du test... ⏳"):
             try:
@@ -76,56 +80,72 @@ def app():
                     df=df,
                     default_apparie=apparie
                 )
+            except TypeError as te:
+                st.error(f"Erreur d'appel de propose_tests_bivaries(): {te}")
+                return
             except Exception as e:
                 st.error(f"Erreur lors de l'exécution des tests : {e}")
                 return
 
-            # --- Récupération de la clé ---
+            # --- Récupération clé paire ---
             key = f"{var1}__{var2}"
-            alt_key = f"{var2}__{var1}"
-            if key not in details and alt_key in details:
-                key = alt_key
             if key not in details:
-                st.warning("⚠️ Test non trouvé dans les résultats générés pour cette paire de variables.")
+                alt_key = f"{var2}__{var1}"
+                if alt_key in details:
+                    key = alt_key
+
+            if key not in details:
+                st.warning("⚠️ Test non trouvé dans les résultats pour cette paire de variables.")
                 st.write("Clés disponibles :", list(details.keys())[:20])
                 return
 
             test_detail = details[key]
 
-            # --- 1) Résumé synthétique ---
+            # --- 1) Résumé du test ---
             st.subheader("📋 Résumé du test")
             summary_record = {
                 "Test": test_detail.get("test", None),
+                "Test recommandé": test_detail.get("recommended_test", None),
                 "Statistique": test_detail.get("statistic", test_detail.get("stat", None)),
                 "p-value": test_detail.get("p_value", test_detail.get("p", None)),
                 "p-value corrigée": test_detail.get("p_value_corrected", None),
                 "Effect size": test_detail.get("effect_size", test_detail.get("effect", None)),
-                "Cramers V": test_detail.get("cramers_v", None),
-                "Test recommandé": test_detail.get("recommended_test", None)
+                "Cramers V": test_detail.get("cramers_v", None)
             }
             st.table(pd.DataFrame([summary_record]))
 
             # --- 2) Détails complémentaires ---
             st.subheader("🔎 Détails")
-            if "normality_var1" in test_detail or "normality_var2" in test_detail:
-                st.markdown("**Tests de normalité :**")
-                st.write(test_detail.get("normality_var1", "—"))
-                st.write(test_detail.get("normality_var2", "—"))
+            # Normalité
+            for var in ["normality_var1", "normality_var2"]:
+                if var in test_detail:
+                    t = test_detail[var]
+                    if t is not None:
+                        st.markdown(f"- `{var.replace('normality_', '')}` : Test = {t['test']}, Stat = {t['stat']:.3f}, p = {t['p']:.3e}, Normal = {bool(t['normal'])}")
 
-            if "ci_low" in test_detail and "ci_high" in test_detail:
-                st.markdown("**Intervalle de confiance bootstrap (corrélations) :**")
-                st.write(f"[{test_detail['ci_low']:.3f}, {test_detail['ci_high']:.3f}]")
-
+            # Theil-Sen et bootstrap
             if "theil_sen" in test_detail and test_detail["theil_sen"]:
                 ts = test_detail["theil_sen"]
                 st.markdown("**Pente Theil-Sen robuste :**")
-                st.write(f"Slope = {ts['slope']:.3f}, Intercept = {ts['intercept']:.3f}, CI slope = {ts['ci_slope']}")
+                st.markdown(f"- Slope = {float(ts['slope']):.3f}, Intercept = {float(ts['intercept']):.3f}")
+                st.markdown(f"- CI slope = [{float(ts['ci_slope'][0]):.3f}, {float(ts['ci_slope'][1]):.3f}]")
+
+            if "ci_low" in test_detail and "ci_high" in test_detail:
+                st.markdown(f"**Intervalle de confiance bootstrap (corrélation) :** [{float(test_detail['ci_low']):.3f}, {float(test_detail['ci_high']):.3f}]")
 
             # --- 3) Graphique associé ---
             st.subheader("📊 Graphique associé")
             plot_path = test_detail.get("plot") or test_detail.get("plot_boxplot")
-            if plot_path and os.path.exists(plot_path):
-                st.image(plot_path, use_column_width=True)
+            if plot_path:
+                try:
+                    if isinstance(plot_path, (list, tuple)):
+                        plot_path = plot_path[0]
+                    if os.path.exists(plot_path):
+                        st.image(plot_path, use_column_width=True)
+                    else:
+                        st.info("Chemin de l'image non trouvé :", plot_path)
+                except Exception:
+                    st.info("Aucun graphique disponible.")
             else:
                 st.info("Aucun graphique disponible pour ce test.")
 
