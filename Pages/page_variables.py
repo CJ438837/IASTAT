@@ -75,3 +75,8 @@ def app():
         if st.button("➡️ Passer à la page Analyse Descriptive", use_container_width=True):
             st.session_state.main_page = "Analyse"
             st.session_state.analyse_subpage = "Descriptive"
+    with col3:
+        if st.button("➡️ Besoin d'une aide théorique ?", use_container_width=True):
+            st.session_state.main_page = "Théorie"
+            st.session_state.theorie_subpage = "Variables"
+
