@@ -1,140 +1,168 @@
-# Pages/page_testsmulti.py
-import os
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-from modules.IA_STAT_testmultivaries import propose_tests_multivariés
+import numpy as np
+from scipy.stats import chi2
+from scipy.linalg import inv
+from sklearn.preprocessing import StandardScaler
+from statsmodels.multivariate.manova import MANOVA
 
-plt.style.use("seaborn-v0_8-muted")
+# -----------------------------------------------------
+#  Mardia multivariate normality
+# -----------------------------------------------------
+def mardia_test(X):
+    X = np.asarray(X)
+    n, k = X.shape
+    X_centered = X - np.mean(X, axis=0)
+    S = np.cov(X_centered, rowvar=False)
+    invS = inv(S)
 
-def _display_info(info):
-    """Affiche proprement le dict 'info' renvoyé par le module."""
-    if info is None:
-        return
-    if not isinstance(info, dict):
-        st.write(info)
-        return
-    # DataFrame present as 'table' key
-    if "table" in info and isinstance(info["table"], list):
-        try:
-            df = pd.DataFrame(info["table"])
-            st.dataframe(df, use_container_width=True)
-        except Exception:
-            st.write(info["table"])
-        return
-    # Otherwise print keys
-    for k, v in info.items():
-        if isinstance(v, list) and len(v) > 0 and isinstance(v[0], dict):
-            st.markdown(f"**{k}** :")
-            try:
-                st.dataframe(pd.DataFrame(v), use_container_width=True)
-            except Exception:
-                st.write(v)
-        else:
-            st.write(f"- **{k}** : {v}")
+    # Skewness
+    b1 = 0
+    for i in range(n):
+        b1 += (X_centered[i] @ invS @ X_centered[i])**3
+    b1 = b1 / n / n
+
+    # Kurtosis
+    di = np.array([X_centered[i] @ invS @ X_centered[i] for i in range(n)])
+    b2 = np.mean(di**2)
+
+    # p-values
+    skew_chi = b1 * n / 6
+    p_skew = 1 - chi2.cdf(skew_chi, df=int(k*(k+1)*(k+2)/6))
+
+    kurt_z = (b2 - k*(k+2)) / np.sqrt(8*k*(k+2)/n)
+    p_kurt = 2 * (1 - chi2.cdf(abs(kurt_z), df=1))
+
+    return {
+        "skewness": b1,
+        "skew_pvalue": p_skew,
+        "kurtosis": b2,
+        "kurt_pvalue": p_kurt
+    }
 
 
+# -----------------------------------------------------
+#  Box’s M Test
+# -----------------------------------------------------
+def box_m_test(df, group_col):
+    groups = df[group_col].unique()
+    k = len(groups)
+    n_total = len(df)
+
+    cov_matrices = []
+    ns = []
+
+    for g in groups:
+        subset = df[df[group_col] == g].drop(columns=[group_col])
+        cov_matrices.append(np.cov(subset, rowvar=False))
+        ns.append(len(subset))
+
+    pooled_cov = sum([(ns[i] - 1) * cov_matrices[i] for i in range(k)]) / (sum(ns) - k)
+
+    M = (sum(ns) - k) * np.log(np.linalg.det(pooled_cov))
+    for i in range(k):
+        M -= (ns[i] - 1) * np.log(np.linalg.det(cov_matrices[i]))
+
+    df_box = (df.shape[1] - 1) * (k - 1)
+    p_value = 1 - chi2.cdf(M, df=df_box)
+
+    return M, p_value, df_box
+
+
+# -----------------------------------------------------
+#  PAGE STREAMLIT
+# -----------------------------------------------------
 def app():
-    st.title("📊 Tests Multivariés — Interface")
+    st.title("📊 Tests Multivariés")
+    st.markdown("---")
+
+    st.subheader("🎯 Objectif")
     st.markdown("""
-    Ici vous pouvez lancer les analyses multivariées : PCA, MCA, FAMD, MANOVA, régression multiple, diagnostics, corrélations, normalité multivariée et Box's M (lorsque possible).
+    Cette section permet d'analyser **simultanément plusieurs variables quantitatives**  
+    et d'étudier leurs relations globales au sein de groupes.
+    
+    Elle inclut :
+    - Normalité multivariée (Mardia)
+    - Test d’égalité des matrices de covariance (Box’s M)
+    - MANOVA
+    - Exploration visuelle
     """)
 
-    # prérequis
-    if "df_selected" not in st.session_state:
-        st.warning("Veuillez d'abord importer un fichier dans la page Fichier.")
-        st.stop()
-    if "types_df" not in st.session_state:
-        st.warning("Veuillez d'abord détecter les types dans la page Variables.")
-        st.stop()
-
-    df = st.session_state["df_selected"].copy()
-    types_df = st.session_state["types_df"].copy()
-
-    st.success(f"✅ Données prêtes — {df.shape[0]} lignes × {df.shape[1]} colonnes")
-
-    # sélection variables
-    st.header("🎯 Sélection des variables")
-    cols = df.columns.tolist()
-    col1, col2 = st.columns([2, 3])
-    with col1:
-        target_var = st.selectbox("Variable cible (à expliquer)", cols)
-    with col2:
-        explicatives = st.multiselect("Variables explicatives (sélectionnez 1+)", [c for c in cols if c != target_var])
-
-    if not explicatives:
-        st.info("Sélectionnez au moins une variable explicative.")
-        st.stop()
-
-    # dossier figures (optionnel)
-    output_folder = st.text_input("Dossier pour enregistrer les figures (optionnel)", value="multivaries_plots")
-
-    if st.button("📈 Lancer l'analyse multivariée"):
-        with st.spinner("Exécution..."):
-            try:
-                results = propose_tests_multivariés(df, types_df, target_var, explicatives)
-            except Exception as e:
-                st.error(f"❌ Erreur lors de l'exécution : {e}")
-                st.stop()
-
-        st.success("✅ Analyse terminée")
-
-        # affichage résultats
-        for res in results:
-            test_name = res.get("test", "Test inconnu")
-            st.subheader(f"🧪 {test_name}")
-
-            if res.get("error"):
-                st.error(f"Erreur : {res['error']}")
-                st.markdown("---")
-                continue
-
-            # tableau principal
-            df_res = res.get("result_df")
-            if isinstance(df_res, pd.DataFrame) and not df_res.empty:
-                st.markdown("**Résultats**")
-                st.dataframe(df_res, use_container_width=True)
-
-            # figure
-            fig = res.get("fig")
-            if fig is not None:
-                try:
-                    st.markdown("**Graphique**")
-                    st.pyplot(fig)
-                except Exception:
-                    st.info("Figure présente mais impossible à afficher.")
-
-            # info (toujours dict via module)
-            info = res.get("info", {})
-            if info:
-                st.markdown("**Informations complémentaires**")
-                _display_info(info)
-
-            # interpretation
-            interp = res.get("interpretation")
-            if interp:
-                st.markdown("**Interprétation**")
-                st.info(interp)
-
-            # save figure (best effort)
-            if fig is not None and output_folder:
-                try:
-                    os.makedirs(output_folder, exist_ok=True)
-                    safe_name = f"{test_name.replace(' ', '_').replace('/', '_')}.png"
-                    path = os.path.join(output_folder, safe_name)
-                    try:
-                        fig.savefig(path, bbox_inches="tight")
-                    except Exception:
-                        pass
-                except Exception:
-                    pass
-
-            st.markdown("---")
-
-    # navigation retour (comme ta page bivariée)
     st.markdown("---")
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        if st.button("⬅️ Retour : Tests bivariés"):
-            st.session_state.main_page = "Analyse"
-            st.session_state.analyse_subpage = "Tests bivariés"
+
+    uploaded = st.file_uploader("📥 Importez votre dataset (CSV)", type=["csv"])
+
+    if uploaded is not None:
+        df = pd.read_csv(uploaded)
+        st.write("Aperçu du dataset :")
+        st.dataframe(df.head())
+
+        numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
+
+        st.markdown("---")
+
+        # -------------------------
+        # Multivariate normality
+        # -------------------------
+        st.subheader("🧪 Normalité multivariée (Test de Mardia)")
+
+        if len(numeric_cols) < 2:
+            st.warning("Il faut au moins 2 variables numériques.")
+        else:
+            try:
+                results = mardia_test(df[numeric_cols])
+
+                st.success("Test effectué avec succès")
+
+                st.write(f"**Skewness multivariée** : {results['skewness']:.4f}")
+                st.write(f"→ *p-value* = {results['skew_pvalue']:.4f}")
+
+                st.write(f"**Kurtosis multivariée** : {results['kurtosis']:.4f}")
+                st.write(f"→ *p-value* = {results['kurt_pvalue']:.4f}")
+
+            except Exception as e:
+                st.error(f"Erreur Mardia : {e}")
+
+        st.markdown("---")
+
+        # -------------------------
+        # Box's M
+        # -------------------------
+        st.subheader("🧩 Box’s M")
+
+        group_col = st.selectbox("Sélectionnez la variable de groupe", df.columns)
+
+        if group_col:
+            try:
+                M, pval, df_box = box_m_test(df[numeric_cols + [group_col]], group_col)
+
+                st.write(f"**Statistique M** : {M:.4f}")
+                st.write(f"**df** : {df_box}")
+                st.write(f"**p-value** : {pval:.4f}")
+
+                if pval < 0.05:
+                    st.warning("⚠️ Les matrices de covariance ne sont pas égales entre les groupes.")
+                else:
+                    st.success("✔️ Les matrices de covariance sont homogènes entre les groupes.")
+
+            except Exception as e:
+                st.error(f"Erreur Box’s M : {e}")
+
+        st.markdown("---")
+
+        # -------------------------
+        # MANOVA
+        # -------------------------
+        st.subheader("📐 MANOVA")
+
+        try:
+            formula = " + ".join(numeric_cols) + " ~ " + group_col
+            manova = MANOVA.from_formula(formula, data=df)
+            st.text(manova.mv_test().summary())
+        except Exception as e:
+            st.error(f"Erreur MANOVA : {e}")
+
+        st.markdown("---")
+
+        st.markdown("© 2025 Corvus Analytics - Tous droits réservés")
+
