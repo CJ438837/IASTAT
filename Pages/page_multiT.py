@@ -26,7 +26,7 @@ def app():
     - Réduit la dimensionnalité tout en conservant la variance maximale  
     - Les axes principaux (PC1, PC2…) représentent des combinaisons linéaires des variables initiales  
     - Permet de visualiser clusters et tendances dans les données  
-    - **Interprétation** : pourcentage de variance expliquée par chaque composante
+    - **Interprétation** : pourcentage de variance expliquée et loadings des variables
     """)
 
     st.markdown("---")
@@ -48,7 +48,7 @@ def app():
     st.markdown("""
     - Destinée aux jeux de données **mixtes** (numériques + catégorielles)  
     - Combine PCA et MCA pour représenter toutes les variables sur un plan commun  
-    - Permet d’identifier des groupes ou des patterns globaux  
+    - Permet d’identifier des groupes ou patterns globaux  
     - **Interprétation** : corrélation des variables numériques et contribution des modalités catégorielles
     """)
 
@@ -69,16 +69,15 @@ def app():
     st.subheader("🔷 5. Régression multiple et diagnostic des résidus")
     st.markdown("""
     **Régression multiple :**
-    - Modélise l’influence de **plusieurs variables explicatives** sur une variable cible  
+    - Modélise l’influence de **plusieurs variables explicatives numériques** sur une variable cible  
     - Fournit coefficients, intervalles de confiance et p-values  
     - Permet de prédire et d’évaluer l’effet relatif des variables
 
     **Analyse des résidus :**
     - Vérifie les hypothèses du modèle :  
         - Normalité des résidus (Shapiro-Wilk)  
-        - Homoscédasticité (Breusch-Pagan)  
-        - QQ-plot pour détecter des écarts aux hypothèses  
-    - Permet de valider la qualité de la régression et de détecter des outliers
+    - Graphique résidus vs fitted pour détecter outliers et tendances  
+    - Permet de valider la qualité de la régression
     """)
 
     st.markdown("---")
@@ -94,12 +93,22 @@ def app():
 
     st.markdown("---")
 
+    # --- 7. Normalité multivariée (Mardia) ---
+    st.subheader("🔷 7. Normalité multivariée (Mardia)")
+    st.markdown("""
+    - Vérifie si les variables numériques suivent une distribution normale multivariée  
+    - Utilisé pour valider les hypothèses des analyses multivariées (PCA, MANOVA, régression multiple)  
+    - Résultat : statistique HZ et p-value → normalité si p > 0.05
+    """)
+
+    st.markdown("---")
+
     # --- Bonnes pratiques ---
     st.subheader("💡 Bonnes pratiques")
     st.markdown("""
     - Vérifiez toujours le type des variables avant d’appliquer chaque méthode  
     - Utilisez les visualisations pour compléter l’interprétation statistique  
-    - Pour PCA/MCA/FAMD, examinez les pourcentages de variance expliquée et les contributions des variables  
+    - Pour PCA/MCA/FAMD, examinez la variance expliquée et la contribution des variables  
     - Pour MANOVA et régressions multiples, vérifiez les hypothèses et la significativité globale
     """)
 
@@ -114,7 +123,7 @@ def app():
     - **Réduction de dimension** : PCA, MCA, FAMD  
     - **Tests d’influence multivariés** : MANOVA  
     - **Modélisation et diagnostic** : régression multiple et résidus  
-    - **Exploration des corrélations** entre variables
+    - **Exploration des corrélations et normalité multivariée**  
 
     Cette page résume les concepts théoriques essentiels pour comprendre les résultats générés par le module d’analyse multivariée.
     """)
