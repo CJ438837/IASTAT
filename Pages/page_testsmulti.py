@@ -1,141 +1,91 @@
+# Pages/page_testsmulti.py
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from modules.IA_STAT_testmultivaries import propose_tests_multivariés
 
-plt.style.use("seaborn-v0_8-muted")
+st.set_page_config(page_title="Tests Multivariés", layout="wide")
 
-def app():
-    # --- 🎨 Thème Corvus ---
+st.title("📊 Analyse Multivariée Automatisée")
+
+# ---------------------------
+# Upload du fichier
+# ---------------------------
+uploaded_file = st.file_uploader("Choisir un fichier Excel ou CSV", type=["xlsx", "csv"])
+
+if uploaded_file:
     try:
-        with open("assets/corvus_theme.css") as f:
-            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+        if uploaded_file.name.endswith(".csv"):
+            df = pd.read_csv(uploaded_file)
+        else:
+            df = pd.read_excel(uploaded_file)
     except Exception as e:
-        st.warning(f"Impossible de charger le thème Corvus : {e}")
-
-    # --- 🧠 En-tête ---
-    st.markdown("<h1 class='corvus-title'> Tests Multivariés Avancés</h1>", unsafe_allow_html=True)
-    st.markdown("""
-    **Passons maintenant aux interactions plus complexes !**  
-    Ici l'analyse implique une **variable dépendante** et **plusieurs variables explicatives**, contrairement aux tests bivariés.
-    """)
-
-    # --- 1️⃣ Vérification des prérequis ---
-    if "df_selected" not in st.session_state or st.session_state["df_selected"] is None:
-        st.warning("⚠️ Veuillez d'abord charger un fichier dans l'onglet **Fichier**.")
+        st.error(f"Impossible de lire le fichier : {e}")
         st.stop()
 
-    df = st.session_state["df_selected"]
+    st.success(f"Fichier chargé avec succès : {uploaded_file.name}")
+    st.write("Aperçu des données :")
+    st.dataframe(df.head())
 
-    if "types_df" not in st.session_state or st.session_state["types_df"] is None:
-        types_df = pd.DataFrame({
-            "variable": df.columns,
-            "type": [
-                "numérique" if pd.api.types.is_numeric_dtype(df[col]) else "catégorielle"
-                for col in df.columns
-            ]
-        })
-        st.session_state["types_df"] = types_df
-    else:
-        types_df = st.session_state["types_df"]
+    # ---------------------------
+    # Définition types variables
+    # ---------------------------
+    st.sidebar.header("Configuration des variables")
+    target_var = st.sidebar.selectbox("Variable cible (target)", df.columns)
+    explicatives = st.sidebar.multiselect("Variables explicatives", [c for c in df.columns if c != target_var])
 
-    st.success(f"✅ Données disponibles : {df.shape[0]} lignes, {df.shape[1]} colonnes")
+    # Types de variables (optionnel)
+    types_df = pd.DataFrame({
+        "variable": df.columns,
+        "type": ["numérique" if pd.api.types.is_numeric_dtype(df[c]) else "catégorielle" for c in df.columns]
+    })
 
-    # --- 2️⃣ Aperçu des données ---
-    st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
-    st.markdown("### 📋 Aperçu du jeu de données")
-    st.dataframe(df.head(), use_container_width=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    # ---------------------------
+    # Bouton pour lancer l'analyse
+    # ---------------------------
+    if st.sidebar.button("📈 Lancer l'analyse multivariée"):
 
-    # --- 3️⃣ Sélection des variables ---
-    st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
-    st.markdown("### 🎯 Sélection des variables à inclure dans l'analyse")
+        with st.spinner("Analyse en cours…"):
+            results = propose_tests_multivariés(df, types_df, target_var, explicatives)
 
-    target_var = st.selectbox("Variable à expliquer :", df.columns)
+        st.success("✅ Analyse terminée")
 
-    explicatives = st.multiselect(
-        "Variables explicatives :",
-        [c for c in df.columns if c != target_var],
-        default=[]
-    )
+        # ---------------------------
+        # Affichage des résultats
+        # ---------------------------
+        for res in results:
+            test_name = res.get("test", "Test inconnu")
+            st.subheader(f"🧪 {test_name}")
 
-    st.markdown("</div>", unsafe_allow_html=True)
+            # Erreurs
+            if res.get("error"):
+                st.error(f"Erreur : {res['error']}")
 
-    if not explicatives:
-        st.info("💡 Sélectionnez au moins une variable explicative pour continuer.")
-        st.stop()
+            # DataFrame
+            df_res = res.get("result_df")
+            if df_res is not None:
+                st.dataframe(df_res)
 
-    # --- 4️⃣ Lancer les tests ---
-    st.markdown("<div class='corvus-card'>", unsafe_allow_html=True)
-    st.markdown("### 📈 Lancer les tests multivariés")
+            # Figure
+            fig = res.get("fig")
+            if fig:
+                st.pyplot(fig)
 
-    if st.button("📈 Démarrer l'analyse multivariée", use_container_width=True):
-        with st.spinner("Analyse en cours..."):
-            try:
-                results = propose_tests_multivariés(
-                    df,
-                    types_df,
-                    target_var=target_var,
-                    explicatives=explicatives
-                )
+            # Additional info
+            info = res.get("additional_info")
+            if info:
+                # On s'assure que c'est un dict
+                if isinstance(info, dict):
+                    st.write("ℹ️ Informations complémentaires :")
+                    for k, v in info.items():
+                        st.write(f"- **{k}** : {v}")
+                else:
+                    st.write("ℹ️ Informations complémentaires :")
+                    st.write(info)
 
-                for res in results:
+            # Interprétation
+            interp = res.get("interpretation")
+            if interp:
+                st.info(f"💡 Interprétation : {interp}")
 
-                    # 🔍 Sécurité : ignorer les résultats non conformes
-                    if not isinstance(res, dict):
-                        st.warning(f"⚠️ Résultat inattendu ignoré : {res}")
-                        continue
-
-                    st.divider()
-                    st.subheader(f"🧩 {res.get('test', 'Test inconnu')}")
-
-                    # Gestion des erreurs
-                    if "error" in res:
-                        st.error(f"❌ Erreur : {res['error']}")
-                        continue
-                    if "message" in res:
-                        st.warning(res["message"])
-                        continue
-
-                    # Résultats tabulaires
-                    if isinstance(res.get("result_df"), pd.DataFrame) and not res["result_df"].empty:
-                        st.dataframe(res["result_df"], use_container_width=True)
-
-                    # Graphique associé
-                    if res.get("fig") is not None:
-                        st.pyplot(res["fig"])
-
-                    # --- 📌 Informations additionnelles (format propre) ---
-                    additional = res.get("additional_info")
-                    if isinstance(additional, dict) and additional:
-                        st.markdown("<div class='corvus-subcard'>", unsafe_allow_html=True)
-                        st.markdown("#### 📌 Informations complémentaires")
-
-                        col1, col2 = st.columns(2)
-                        items = list(additional.items())
-
-                        for i, (label, value) in enumerate(items):
-                            target_col = col1 if i % 2 == 0 else col2
-                            target_col.markdown(
-                                f"""
-                                <div class='corvus-info'>
-                                    <b>{label}</b><br>
-                                    <span>{value}</span>
-                                </div>
-                                """,
-                                unsafe_allow_html=True
-                            )
-
-                        st.markdown("</div>", unsafe_allow_html=True)
-
-                    # Interprétation automatique
-                    if res.get("interpretation"):
-                        st.markdown(
-                            f"<div class='corvus-interpretation'><b>Interprétation :</b> {res['interpretation']}</div>",
-                            unsafe_allow_html=True
-                        )
-
-            except Exception as e:
-                st.error(f"❌ Une erreur est survenue pendant l'exécution : {e}")
-
-    st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown("---")
