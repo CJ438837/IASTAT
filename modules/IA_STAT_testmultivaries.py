@@ -339,36 +339,47 @@ def propose_tests_multivariés(df, types_df, target_var, explicatives):
     # ---------------------------------------------------------
     # Normalité multivariée (Mardia)
     # ---------------------------------------------------------
+    # Normalité multivariée (Mardia)
     if PINGOUIN_AVAILABLE:
-        try:
-            numeric_for_mvn = numeric_subset.dropna()
-            if numeric_for_mvn.shape[0] >= 8 and numeric_for_mvn.shape[1] >= 2:
-                m = pg.multivariate_normality(numeric_for_mvn, alpha=0.05)
+       try:
+          numeric_for_mvn = numeric_subset.dropna()
+          if numeric_for_mvn.shape[0] >= 8 and numeric_for_mvn.shape[1] >= 2:
+              m = pg.multivariate_normality(numeric_for_mvn, alpha=0.05)
+            
+            # Extraction sécurisée selon type renvoyé par pingouin
+              if hasattr(m, 'normal'):  # objet HZResults
+                  mvn_info = {
+                      "normal": bool(m.normal),
+                      "HZ_stat": float(getattr(m, "HZ", np.nan)),
+                      "pvalue": float(getattr(m, "pval", np.nan))
+                  }
+              elif isinstance(m, dict):  # dict dans certaines versions
+                  mvn_info = {
+                      "normal": bool(m.get("normal", False)),
+                      "skewness": float(m.get("skew", np.nan)),
+                      "kurtosis": float(m.get("kurtosis", np.nan)),
+                      "pvalue": float(m.get("pval", np.nan))
+                  }
+              else:
+                  mvn_info = {"note": str(m)}
 
-                mvn_info = {
-                    "normal": bool(m.normal),
-                    "skewness": float(m.skew),
-                    "kurtosis": float(m.kurtosis),
-                    "pvalue": float(m.pval)
-                }
+          else:
+              mvn_info = {"note": "Taille insuffisante pour test Mardia."}
 
-            else:
-                mvn_info = {"note": "Taille insuffisante pour test Mardia."}
+          results.append({
+              "test": "Normalité multivariée (Mardia)",
+              "result_df": None,
+              "fig": None,
+              "info": _safe_info(mvn_info)
+          })
 
-            results.append({
-                "test": "Normalité multivariée (Mardia)",
-                "result_df": None,
-                "fig": None,
-                "info": _safe_info(mvn_info)
-            })
+      except Exception as e:
+          results.append({"test": "Normalité multivariée (Mardia)", "error": str(e)})
 
-        except Exception as e:
-            results.append({"test": "Normalité multivariée (Mardia)", "error": str(e)})
-
-    else:
-        results.append({
-            "test": "Normalité multivariée (Mardia)",
-            "info": _safe_info("pingouin non installé.")
-        })
+  else:
+      results.append({
+          "test": "Normalité multivariée (Mardia)",
+          "info": _safe_info("pingouin non installé.")
+      })
 
     return results
