@@ -4,7 +4,7 @@ def app():
     st.title("🏠 Accueil")
 
     st.markdown("""
-    **Bienvenue sur Appstats, votre application d'analyse statistique automatisée.**
+    **Bienvenue sur Corvus Analytics, votre application d'analyse statistique automatisée.**
 
     Cette application a été conçue pour **faciliter l’exploration, la compréhension et l’analyse de vos données**, qu’il s’agisse de fichiers CSV, Excel ou de DataFrames Pandas déjà chargés.  
     L’objectif principal est de fournir un environnement **intuitif, rapide et fiable** pour analyser vos données sans perdre de temps à configurer des scripts ou des calculs manuels.
@@ -52,5 +52,6 @@ def app():
 
     st.markdown("---")
     st.markdown("© 2025 Corvus Analytics - Tous droits réservés")
+
 
 
