@@ -227,7 +227,7 @@ def propose_tests_bivaries(types_df, distribution_df, df,
 
         plot_path = None
         try:
-            fig, ax = plt.subplots(figsize=(6, 4))
+            fig, ax = plt.subplots(figsize=(4, 3))
             sns.scatterplot(x=arr1, y=arr2, ax=ax)
             ax.set_xlabel(v1)
             ax.set_ylabel(v2)
@@ -316,7 +316,7 @@ def propose_tests_bivaries(types_df, distribution_df, df,
 
         plot_path = None
         try:
-            fig, ax = plt.subplots(figsize=(6, 4))
+            fig, ax = plt.subplots(figsize=(4, 3))
             sns.boxplot(x=cat, y=num, data=df, ax=ax)
             ax.set_title(f"{num} par {cat} ({test_name})")
             fname = f"{key}_boxplot.png"
@@ -371,7 +371,7 @@ def propose_tests_bivaries(types_df, distribution_df, df,
 
         plot_path = None
         try:
-            fig, ax = plt.subplots(figsize=(6, 5))
+            fig, ax = plt.subplots(figsize=(4, 3))
             sns.heatmap(table, annot=True, fmt="d", cmap="coolwarm", ax=ax)
             ax.set_title(f"{v1} vs {v2} ({test_name})")
             fname = f"{key}_heatmap.png"
