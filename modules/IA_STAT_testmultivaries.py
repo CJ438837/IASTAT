@@ -61,39 +61,36 @@ def _safe_fig(fig):
     return None
 
 
-def _box_m_test(X, group):
-    """
-    Compute Box's M test for equality of covariance matrices across groups.
-    X: numeric DataFrame of predictors
-    group: categorical Series with group labels
-    Returns M_stat_corrected, df, pvalue
-    Implementation based on standard Box's M statistic with small-sample correction.
-    """
+import pingouin as pg
+import pandas as pd
+
+def test_box_m(df, groups, variables):
     try:
-        groups = [X[group == g] for g in group.dropna().unique()]
-        g = len(groups)
-        p = X.shape[1]
-        ns = [len(gg) for gg in groups]
-        if any([n <= p for n in ns]):
-            # not enough observations to compute cov reliably
-            return None, None, None, "Taille de groupe insuffisante pour Box's M"
-        cov_mats = [np.cov(gg.T, bias=False) for gg in groups]
-        pooled = sum([(ns[i] - 1) * cov_mats[i] for i in range(g)]) / (sum(ns) - g)
-        ln_det_pooled = np.log(np.linalg.det(pooled))
-        M = 0.0
-        for i in range(g):
-            M += (ns[i] - 1) * (np.log(np.linalg.det(cov_mats[i])) - ln_det_pooled)
-        # correction factor
-        c = 0.0
-        for i in range(g):
-            c += 1.0 / (ns[i] - 1)
-        correction = ((2 * p**2 + 3 * p - 1) / (6 * (p + 1) * (g - 1))) * (c - 1.0 / (sum(ns) - g))
-        M_corr = (1 - correction) * M
-        df = (g - 1) * p * (p + 1) / 2.0
-        pval = 1 - chi2.cdf(M_corr, df)
-        return float(M_corr), float(df), float(pval), None
+        data = df[variables + [groups]].dropna()
+
+        res = pg.box_m(data[variables], data[groups])
+
+        return {
+            "test": "Box's M",
+            "result_df": pd.DataFrame({
+                "Statistique M": [res["stat"]],
+                "p-value": [res["pval"]],
+                "df1": [res["df1"]],
+                "df2": [res["df2"]]
+            }),
+            "interpretation": (
+                "⚠️ Les variances-covariances semblent différentes entre groupes."
+                if res["pval"] < 0.05 else
+                "✔️ Les matrices de variances-covariances sont homogènes (p ≥ 0.05)."
+            )
+        }
+
     except Exception as e:
-        return None, None, None, str(e)
+        return {
+            "test": "Box's M",
+            "error": str(e)
+        }
+
 
 
 # === Fonction harmonisée et complète ===
