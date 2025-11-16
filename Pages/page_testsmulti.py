@@ -181,7 +181,7 @@ def app():
 
     # Navigation rapide vers la page bivariée
     st.markdown("---")
-    col_back, col_center, col_forward = st.columns([1, 2, 1])
+    col1, col2, col3 = st.columns([1, 2, 1])
     with col3:
         if st.button("➡️ Besoin d'une aide théorique ?", use_container_width=True):
             st.session_state.main_page = "Théorie"
