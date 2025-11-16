@@ -38,7 +38,7 @@ def plot_descriptive(df, types_df, output_folder="plots", selected_vars=None, gr
         if col_data.empty:
             continue
 
-        plt.figure(figsize=(6, 4))
+        plt.figure(figsize=(4, 3))
         title = f"{col} ({var_type})"
         if group_var:
             title += f" par {group_var}"
@@ -99,7 +99,7 @@ def plot_descriptive(df, types_df, output_folder="plots", selected_vars=None, gr
             if num not in df.columns or cat not in df.columns:
                 continue
 
-            plt.figure(figsize=(6, 4))
+            plt.figure(figsize=(4, 3))
             if group_var and group_var in df.columns and group_var != cat:
                 sns.boxplot(x=df[cat], y=df[num], hue=df[group_var], palette="Set3")
             else:
@@ -113,7 +113,7 @@ def plot_descriptive(df, types_df, output_folder="plots", selected_vars=None, gr
 
     # --- 3️⃣ Matrice de corrélation ---
     if len(num_cols) > 1:
-        plt.figure(figsize=(8, 6))
+        plt.figure(figsize=(6, 4))
         corr = df[num_cols].corr()
         sns.heatmap(corr, annot=True, fmt=".2f", cmap="coolwarm")
         plt.title("Matrice de corrélation (variables sélectionnées)")
