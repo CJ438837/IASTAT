@@ -10,4 +10,5 @@ openpyxl
 fitter 
 setuptools
 statsmodels
+pingouin
 
