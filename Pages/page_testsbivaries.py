@@ -161,3 +161,7 @@ def app():
         if st.button("➡️ Page suivante : Tests multivariés"):
             st.session_state.main_page = "Analyse"
             st.session_state.analyse_subpage = "Tests multivariés"
+    with col3:
+        if st.button("➡️ Besoin d'une aide théorique ?", use_container_width=True):
+            st.session_state.main_page = "Théorie"
+            st.session_state.theorie_subpage = "Tests bivariés"
