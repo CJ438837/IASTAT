@@ -182,9 +182,10 @@ def app():
     # Navigation rapide vers la page bivariée
     st.markdown("---")
     col_back, col_center, col_forward = st.columns([1, 2, 1])
-    with col_center:
-        if st.button("⬅️ Aller à : Tests bivariés"):
-            st.session_state.main_page = "Analyse"
-            st.session_state.analyse_subpage = "Tests bivariés"
+    with col3:
+        if st.button("➡️ Besoin d'une aide théorique ?", use_container_width=True):
+            st.session_state.main_page = "Théorie"
+            st.session_state.theorie_subpage = "Tests multivariés"
+            
 
     st.markdown("© 2025 Corvus Analytics - Tous droits réservés")
