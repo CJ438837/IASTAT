@@ -1,3 +1,4 @@
+# modules/IA_STAT_testmultivaries.py
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,19 +8,17 @@ from sklearn.preprocessing import StandardScaler
 import statsmodels.api as sm
 from statsmodels.stats.diagnostic import het_breuschpagan, normal_ad
 from statsmodels.multivariate.manova import MANOVA
-from scipy.stats import shapiro
+from scipy.stats import shapiro, chi2
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from statsmodels.stats.multitest import multipletests
+from scipy import stats
 
 plt.style.use("seaborn-v0_8-muted")
 
+
 # ---- Helpers supplémentaires ----
 def _kmo(X):
-    """
-    Compute KMO measure of sampling adequacy.
-    Returns overall_kmo, kmo_per_variable (array)
-    Implementation based on correlation and partial correlation matrices.
-    """
+    """Compute KMO measure of sampling adequacy. Returns (kmo_total, kmo_per_variable)."""
     try:
         corr = np.corrcoef(X.T)
         inv_corr = np.linalg.pinv(corr)
@@ -29,31 +28,15 @@ def _kmo(X):
         np.fill_diagonal(partial, 0.0)
         a = corr.copy()
         np.fill_diagonal(a, 0.0)
-        # squared sums
         denom = np.sum(a**2) + np.sum(partial**2)
         if denom == 0:
             return np.nan, np.full(X.shape[1], np.nan)
         kmo_total = np.sum(a**2) / denom
         kmo_per_var = np.sum(a**2, axis=0) / (np.sum(a**2, axis=0) + np.sum(partial**2, axis=0))
         return float(kmo_total), np.array(kmo_per_var, dtype=float)
-    except Exception as e:
+    except Exception:
         return np.nan, np.full(X.shape[1], np.nan)
 
-def _safe_fig_to_none(fig):
-    """
-    If fig is matplotlib Figure, return it; otherwise return None.
-    (keeps previous behavior where sometimes figures are returned)
-    """
-    try:
-        if fig is None:
-            return None
-        # accept matplotlib.figure.Figure
-        import matplotlib
-        if isinstance(fig, matplotlib.figure.Figure):
-            return fig
-        return None
-    except Exception:
-        return None
 
 def _ensure_df(obj):
     """Return DataFrame if possible, else None"""
@@ -66,64 +49,132 @@ def _ensure_df(obj):
     except Exception:
         return None
 
-# === Fonction améliorée ===
+
+def _safe_fig(fig):
+    """Return fig if it's a matplotlib Figure, else None"""
+    try:
+        import matplotlib
+        if isinstance(fig, matplotlib.figure.Figure):
+            return fig
+    except Exception:
+        pass
+    return None
+
+
+def _box_m_test(X, group):
+    """
+    Compute Box's M test for equality of covariance matrices across groups.
+    X: numeric DataFrame of predictors
+    group: categorical Series with group labels
+    Returns M_stat_corrected, df, pvalue
+    Implementation based on standard Box's M statistic with small-sample correction.
+    """
+    try:
+        groups = [X[group == g] for g in group.dropna().unique()]
+        g = len(groups)
+        p = X.shape[1]
+        ns = [len(gg) for gg in groups]
+        if any([n <= p for n in ns]):
+            # not enough observations to compute cov reliably
+            return None, None, None, "Taille de groupe insuffisante pour Box's M"
+        cov_mats = [np.cov(gg.T, bias=False) for gg in groups]
+        pooled = sum([(ns[i] - 1) * cov_mats[i] for i in range(g)]) / (sum(ns) - g)
+        ln_det_pooled = np.log(np.linalg.det(pooled))
+        M = 0.0
+        for i in range(g):
+            M += (ns[i] - 1) * (np.log(np.linalg.det(cov_mats[i])) - ln_det_pooled)
+        # correction factor
+        c = 0.0
+        for i in range(g):
+            c += 1.0 / (ns[i] - 1)
+        correction = ((2 * p**2 + 3 * p - 1) / (6 * (p + 1) * (g - 1))) * (c - 1.0 / (sum(ns) - g))
+        M_corr = (1 - correction) * M
+        df = (g - 1) * p * (p + 1) / 2.0
+        pval = 1 - chi2.cdf(M_corr, df)
+        return float(M_corr), float(df), float(pval), None
+    except Exception as e:
+        return None, None, None, str(e)
+
+
+# === Fonction harmonisée et complète ===
 def propose_tests_multivariés(df, types_df, target_var, explicatives):
     """
-    Retourne une liste 'results' contenant des dictionnaires décrivant les tests
-    et visualisations multivariés. Conserve la structure existante et ajoute des diagnostics.
-    Inputs / outputs inchangés : retourne 'results' (list).
+    Retourne une liste d'entrées harmonisées décrivant analyses multivariées.
+    Output : list[ dict ] with keys:
+      - test (str)
+      - result_df (pd.DataFrame | None)
+      - fig (matplotlib.figure.Figure | None)
+      - additional_info (dict | None)
+      - error (str | None)
     """
     results = []
 
     try:
-        # --- Détection du type des variables ---
-        target_type = types_df.loc[types_df["variable"] == target_var, "type"].values[0]
-        explicative_types = types_df.loc[types_df["variable"].isin(explicatives), "type"].tolist()
+        # --- Validate inputs ---
+        if target_var not in df.columns:
+            results.append({"test": "Input validation", "result_df": None, "fig": None,
+                            "additional_info": None, "error": f"target_var '{target_var}' absent du DataFrame"})
+            return results
+
+        for v in explicatives:
+            if v not in df.columns:
+                results.append({"test": "Input validation", "result_df": None, "fig": None,
+                                "additional_info": None, "error": f"explicative '{v}' absent du DataFrame"})
+                return results
+
+        # --- Détection types ---
+        try:
+            target_type = types_df.loc[types_df["variable"] == target_var, "type"].values[0]
+        except Exception:
+            target_type = "numérique" if pd.api.types.is_numeric_dtype(df[target_var]) else "catégorielle"
+
+        explicative_types = []
+        for c in explicatives:
+            try:
+                explicative_types.append(types_df.loc[types_df["variable"] == c, "type"].values[0])
+            except Exception:
+                explicative_types.append("numérique" if pd.api.types.is_numeric_dtype(df[c]) else "catégorielle")
 
         all_numeric = all(t == "numérique" for t in [target_type] + explicative_types)
         all_categorical = all(t == "catégorielle" for t in [target_type] + explicative_types)
         mixte = not all_numeric and not all_categorical
 
         subset = df[[target_var] + explicatives].dropna()
-
-        # Common numeric subset for many analyses
         numeric_subset = subset.select_dtypes(include=np.number)
 
-        # =========================================
-        # 1️⃣ PCA (si tout numérique)
-        # =========================================
+        # ----------------
+        # 1) PCA (numérique)
+        # ----------------
         if all_numeric:
+            entry = {"test": "PCA", "result_df": None, "fig": None, "additional_info": None, "error": None}
             try:
                 X = numeric_subset[explicatives].copy()
-                # Safety: need at least 2 variables
                 if X.shape[1] >= 2 and X.shape[0] >= 2:
                     scaler = StandardScaler()
-                    X_scaled = scaler.fit_transform(X)
-                    pca = PCA(n_components=min( min(X.shape[0], X.shape[1]), 2 ))
-                    pcs = pca.fit_transform(X_scaled)
+                    Xs = scaler.fit_transform(X)
+                    n_comp = min(min(X.shape[0], X.shape[1]), 2)
+                    pca = PCA(n_components=n_comp)
+                    pcs = pca.fit_transform(Xs)
                     explained = pca.explained_variance_ratio_
                     explained_cum = np.cumsum(explained)
-
-                    # contributions / loadings (correlations between vars and PCs)
                     loadings = pca.components_.T * np.sqrt(pca.explained_variance_)
                     contrib_df = pd.DataFrame(loadings, columns=[f"PC{i+1}" for i in range(loadings.shape[1])], index=X.columns)
-                    # percentage explained
                     explained_df = pd.DataFrame({
                         "PC": [f"PC{i+1}" for i in range(len(explained))],
                         "ExplainedVariance": explained,
                         "ExplainedVarianceCumulative": explained_cum
                     })
 
-                    # Cercle des corrélations (si n_components >=2)
-                    fig_circle = None
+                    # circle plot if possible
+                    fig = None
                     try:
                         if loadings.shape[1] >= 2:
-                            fig_circle, ax = plt.subplots(figsize=(6,6))
+                            fig, ax = plt.subplots(figsize=(6,6))
                             circle = plt.Circle((0,0), 1, color='black', fill=False)
                             ax.add_artist(circle)
-                            for i, var in enumerate(X.columns):
-                                x = contrib_df.iloc[i,0]
-                                y = contrib_df.iloc[i,1]
+                            for i_var, var in enumerate(X.columns):
+                                x = float(contrib_df.iloc[i_var, 0])
+                                y = float(contrib_df.iloc[i_var, 1])
                                 ax.arrow(0, 0, x, y, head_width=0.02, length_includes_head=True)
                                 ax.text(x*1.05, y*1.05, var, fontsize=9)
                             ax.set_xlim(-1,1)
@@ -134,156 +185,134 @@ def propose_tests_multivariés(df, types_df, target_var, explicatives):
                             ax.axhline(0, color='grey', lw=0.5)
                             ax.axvline(0, color='grey', lw=0.5)
                     except Exception:
-                        fig_circle = None
+                        fig = None
 
                     # KMO
                     try:
                         kmo_total, kmo_per_var = _kmo(X.values)
-                        kmo_df = pd.DataFrame({
-                            "Variable": X.columns,
-                            "KMO_per_var": kmo_per_var
-                        })
-                        kmo_info = {"KMO_total": kmo_total, "KMO_per_variable": kmo_per_var.tolist()}
+                        kmo_info = {"KMO_total": kmo_total, "KMO_per_variable": dict(zip(X.columns, kmo_per_var.tolist()))}
                     except Exception as e:
-                        kmo_df = None
                         kmo_info = {"error": str(e)}
 
-                    results.append({
-                        "test": "Analyse en Composantes Principales (PCA)",
-                        "result_df": _ensure_df(pd.DataFrame(pcs, columns=[f"PC{i+1}" for i in range(pcs.shape[1]) ] )),
-                        "fig": fig_circle,
-                        "info": {
-                            "explained_variance": explained_df.to_dict(orient="list"),
-                            "contributions": contrib_df.reset_index().rename(columns={"index":"variable"}).to_dict(orient="records"),
-                            "kmo": kmo_info
-                        }
-                    })
+                    entry["result_df"] = pd.DataFrame(pcs, columns=[f"PC{i+1}" for i in range(pcs.shape[1])])
+                    entry["fig"] = _safe_fig(fig)
+                    entry["additional_info"] = {
+                        "explained_variance": explained_df.to_dict(orient="records"),
+                        "contributions": contrib_df.reset_index().rename(columns={"index":"variable"}).to_dict(orient="records"),
+                        "kmo": kmo_info
+                    }
                 else:
-                    results.append({"test": "PCA", "error": "Trop peu de données/variables pour PCA."})
+                    entry["error"] = "Trop peu de données/variables pour PCA."
             except Exception as e:
-                results.append({"test": "PCA", "error": str(e)})
+                entry["error"] = str(e)
+            results.append(entry)
 
-        # =========================================
-        # 2️⃣ MCA (si tout catégoriel)
-        # =========================================
+        # ----------------
+        # 2) MCA (catégoriel)
+        # ----------------
         if all_categorical:
+            entry = {"test": "MCA", "result_df": None, "fig": None, "additional_info": None, "error": None}
             try:
                 subset_cat = subset.astype(str)
                 mca = MCA(n_components=2, random_state=42)
                 coords = mca.fit_transform(subset_cat)
-                # inertie / explained inertia
                 try:
                     inertias = mca.explained_inertia_
-                    inertia_df = pd.DataFrame({
-                        "Dimension": [1,2][:len(inertias)],
-                        "ExplainedInertia": list(inertias)
-                    })
+                    inertia_df = pd.DataFrame({"dimension": list(range(1, len(inertias)+1)), "explained_inertia": inertias})
                 except Exception:
                     inertia_df = None
+                fig = None
+                try:
+                    fig, ax = plt.subplots(figsize=(6,5))
+                    if hasattr(coords, "iloc"):
+                        ax.scatter(coords.iloc[:,0], coords.iloc[:,1], alpha=0.7)
+                    else:
+                        ax.scatter(coords[0], coords[1], alpha=0.7)
+                    ax.set_xlabel("Dimension 1")
+                    ax.set_ylabel("Dimension 2")
+                    ax.set_title("MCA - individus")
+                except Exception:
+                    fig = None
 
-                fig_mca, ax = plt.subplots(figsize=(6,5))
-                # coords may be: DataFrame with shape (n_samples, n_components)
-                if hasattr(coords, "shape"):
-                    ax.scatter(coords.iloc[:,0], coords.iloc[:,1], alpha=0.7)
-                else:
-                    ax.scatter(coords[0], coords[1], alpha=0.7)
-                ax.set_xlabel("Dimension 1")
-                ax.set_ylabel("Dimension 2")
-                ax.set_title("MCA - individus")
-                results.append({
-                    "test": "Analyse des Correspondances Multiples (MCA)",
-                    "result_df": _ensure_df(coords),
-                    "fig": fig_mca,
-                    "info": {"inertia": _ensure_df(inertia_df)}
-                })
+                entry["result_df"] = _ensure_df(coords)
+                entry["fig"] = _safe_fig(fig)
+                entry["additional_info"] = {"inertia": _ensure_df(inertia_df).to_dict(orient="records") if inertia_df is not None else None}
             except Exception as e:
-                results.append({"test": "MCA", "error": str(e)})
+                entry["error"] = str(e)
+            results.append(entry)
 
-        # =========================================
-        # 3️⃣ FAMD (si mixte)
-        # =========================================
+        # ----------------
+        # 3) FAMD (mixte)
+        # ----------------
         if mixte:
+            entry = {"test": "FAMD", "result_df": None, "fig": None, "additional_info": None, "error": None}
             try:
                 famd = FAMD(n_components=2, random_state=42)
                 coords = famd.fit_transform(subset)
-                fig_famd, ax = plt.subplots(figsize=(6,5))
-                # coords may be DataFrame-like
-                if hasattr(coords, "__len__") and coords.shape[1] >= 2:
-                    ax.scatter(coords.iloc[:,0], coords.iloc[:,1], alpha=0.7)
-                else:
-                    ax.scatter(coords[0], coords[1], alpha=0.7)
-                ax.set_xlabel("Dimension 1")
-                ax.set_ylabel("Dimension 2")
-                ax.set_title("Analyse Factorielle Mixte (FAMD)")
-
-                # contributions if available
+                fig = None
+                try:
+                    fig, ax = plt.subplots(figsize=(6,5))
+                    if hasattr(coords, "iloc"):
+                        ax.scatter(coords.iloc[:,0], coords.iloc[:,1], alpha=0.7)
+                    else:
+                        ax.scatter(coords[0], coords[1], alpha=0.7)
+                    ax.set_xlabel("Dimension 1")
+                    ax.set_ylabel("Dimension 2")
+                    ax.set_title("FAMD - individus")
+                except Exception:
+                    fig = None
+                # contributions optional
                 try:
                     contribs = famd.column_correlations(subset) if hasattr(famd, "column_correlations") else None
                 except Exception:
                     contribs = None
 
-                results.append({
-                    "test": "Analyse Factorielle Mixte (FAMD)",
-                    "result_df": _ensure_df(coords),
-                    "fig": fig_famd,
-                    "info": {"contributions": contribs}
-                })
+                entry["result_df"] = _ensure_df(coords)
+                entry["fig"] = _safe_fig(fig)
+                entry["additional_info"] = {"contributions": contribs}
             except Exception as e:
-                results.append({"test": "FAMD", "error": str(e)})
+                entry["error"] = str(e)
+            results.append(entry)
 
-        # =========================================
-        # 4️⃣ MANOVA
-        # =========================================
+        # ----------------
+        # 4) MANOVA
+        # ----------------
+        entry = {"test": "MANOVA", "result_df": None, "fig": None, "additional_info": None, "error": None}
         try:
             if (all_numeric or mixte) and subset.shape[0] > 2:
                 formula = f"{target_var} ~ " + " + ".join(explicatives)
                 manova = MANOVA.from_formula(formula, data=subset)
-                manova_res = manova.mv_test()
-                # Try to extract simple metric (Wilks' lambda) and approximate effect
-                info = {}
                 try:
-                    # manova_res is an object with .results; try to parse
-                    for key, val in manova_res.items() if isinstance(manova_res, dict) else []:
-                        pass
-                except Exception:
-                    pass
-                # attempt generic extraction (may vary by statsmodels version)
-                try:
-                    # manova_res.results is often a dict-like
-                    resdict = getattr(manova, "mv_test", None)
-                    # we simply add textual summary
                     manova_text = str(manova.mv_test())
                 except Exception:
                     manova_text = None
-
-                results.append({
-                    "test": "MANOVA (Analyse multivariée de variance)",
-                    "result_df": None,
-                    "fig": None,
-                    "info": {"manova_summary": manova_text}
-                })
+                entry["additional_info"] = {"manova_summary": manova_text}
+            else:
+                entry["additional_info"] = {"note": "MANOVA non applicable (données insuffisantes ou type incompatible)."}
         except Exception as e:
-            results.append({"test": "MANOVA", "error": str(e)})
+            entry["error"] = str(e)
+        results.append(entry)
 
-        # =========================================
-        # 5️⃣ Régression multiple + diagnostics (améliorée)
-        # =========================================
+        # ----------------
+        # 5) Régression multiple + diagnostics
+        # ----------------
+        entry = {"test": "Régression multiple (OLS)", "result_df": None, "fig": None, "additional_info": None, "error": None}
         try:
             X = subset[explicatives].select_dtypes(include=np.number)
             if not X.empty:
                 X_const = sm.add_constant(X)
                 y = subset[target_var]
-
                 model = sm.OLS(y, X_const).fit()
+
                 summary_df = pd.DataFrame({
                     "Variable": model.params.index,
                     "Coefficient": model.params.values,
                     "p-value": model.pvalues.values,
-                    "IC Inf": model.conf_int()[0],
-                    "IC Sup": model.conf_int()[1]
+                    "IC Inf": model.conf_int()[0].values,
+                    "IC Sup": model.conf_int()[1].values
                 })
 
-                # p-values corrigées (FDR)
+                # p-values FDR
                 try:
                     pvals = model.pvalues.values
                     _, pvals_corr, _, _ = multipletests(pvals, method="fdr_bh")
@@ -291,7 +320,7 @@ def propose_tests_multivariés(df, types_df, target_var, explicatives):
                 except Exception:
                     summary_df["p-value FDR"] = np.nan
 
-                # VIF (skip constant)
+                # VIF
                 try:
                     vif_df = pd.DataFrame({
                         "Variable": X.columns,
@@ -300,7 +329,22 @@ def propose_tests_multivariés(df, types_df, target_var, explicatives):
                 except Exception as e:
                     vif_df = pd.DataFrame({"Variable": [], "VIF": []})
 
-                # Résidus
+                entry["result_df"] = summary_df
+                entry["additional_info"] = {"vif": vif_df.to_dict(orient="records")}
+            else:
+                entry["error"] = "Aucune variable explicative numérique disponible pour régression."
+        except Exception as e:
+            entry["error"] = str(e)
+        results.append(entry)
+
+        # Residual diagnostics as separate entry
+        entry = {"test": "Analyse des résidus (diagnostic)", "result_df": None, "fig": None, "additional_info": None, "error": None}
+        try:
+            if not subset[explicatives].select_dtypes(include=np.number).empty:
+                X = subset[explicatives].select_dtypes(include=np.number)
+                X_const = sm.add_constant(X)
+                y = subset[target_var]
+                model = sm.OLS(y, X_const).fit()
                 residuals = model.resid
                 fitted = model.fittedvalues
 
@@ -311,10 +355,13 @@ def propose_tests_multivariés(df, types_df, target_var, explicatives):
                 ax1.set_ylabel("Résidus")
                 ax1.set_title("Résidus vs Valeurs ajustées")
 
-                fig2 = sm.qqplot(residuals, line='s')
-                plt.title("QQ-plot des résidus")
+                fig2 = None
+                try:
+                    fig2 = sm.qqplot(residuals, line='s')
+                    plt.title("QQ-plot des résidus")
+                except Exception:
+                    fig2 = None
 
-                # Tests statistiques sur les résidus
                 shapiro_test = shapiro(residuals) if len(residuals) >= 3 else (np.nan, np.nan)
                 bp_test = het_breuschpagan(residuals, model.model.exog) if model.model.exog.shape[1] > 0 else (np.nan, np.nan, np.nan, np.nan)
                 norm_test = normal_ad(residuals) if len(residuals) >= 8 else (np.nan, np.nan)
@@ -329,88 +376,84 @@ def propose_tests_multivariés(df, types_df, target_var, explicatives):
                                 norm_test[1] if norm_test is not None else np.nan]
                 })
 
-                results.append({
-                    "test": "Régression multiple (OLS)",
-                    "result_df": summary_df,
-                    "fig": None,
-                    "info": {"vif": _ensure_df(vif_df)}
-                })
-                results.append({
-                    "test": "Analyse des résidus (diagnostic)",
-                    "result_df": resid_summary,
-                    "fig": fig1
-                })
-                results.append({
-                    "test": "QQ-plot des résidus",
-                    "result_df": None,
-                    "fig": fig2
-                })
+                entry["result_df"] = resid_summary
+                entry["fig"] = _safe_fig(fig1)
+                entry["additional_info"] = {"qqplot_fig_available": bool(fig2)}
             else:
-                results.append({"test": "Régression multiple (OLS)", "error": "Aucune variable explicative numérique disponible."})
+                entry["error"] = "Pas de diagnostics de résidus (pas de variables numériques explicatives)."
         except Exception as e:
-            results.append({"test": "Régression / Résidus", "error": str(e)})
+            entry["error"] = str(e)
+        results.append(entry)
 
-        # =========================================
-        # 6️⃣ Corrélations multiples
-        # =========================================
+        # ----------------
+        # 6) Corrélations multiples
+        # ----------------
+        entry = {"test": "Corrélations multiples", "result_df": None, "fig": None, "additional_info": None, "error": None}
         try:
             corr_df = numeric_subset.corr(numeric_only=True)
             fig_corr, ax = plt.subplots(figsize=(6, 5))
             cax = ax.matshow(corr_df, cmap="coolwarm")
+            fig_corr.colorbar(cax)
             plt.xticks(range(len(corr_df.columns)), corr_df.columns, rotation=45)
             plt.yticks(range(len(corr_df.columns)), corr_df.columns)
-            fig_corr.colorbar(cax)
             ax.set_title("Matrice de corrélation")
-
-            results.append({
-                "test": "Corrélations multiples",
-                "result_df": corr_df,
-                "fig": fig_corr
-            })
+            entry["result_df"] = corr_df
+            entry["fig"] = _safe_fig(fig_corr)
         except Exception as e:
-            results.append({"test": "Corrélations multiples", "error": str(e)})
+            entry["error"] = str(e)
+        results.append(entry)
 
-        # =========================================
-        # 7️⃣ Diagnostics multivariés additionnels (optionnels)
-        # =========================================
-        # Multivariate normality (pingouin if available)
+        # ----------------
+        # 7) Normalité multivariée (Henze-Zirkler via pingouin) + Mardia if available
+        # ----------------
+        entry = {"test": "Normalité multivariée", "result_df": None, "fig": None, "additional_info": None, "error": None}
         try:
-            import pingouin as pg
             try:
+                import pingouin as pg
                 numeric_for_mvn = numeric_subset.dropna()
                 if numeric_for_mvn.shape[0] >= 10 and numeric_for_mvn.shape[1] >= 2:
-                    mardia = pg.multivariate_normality(numeric_for_mvn, alpha=0.05)
-                    mvn_df = pd.DataFrame({
-                        "Skew": [mardia[0]],
-                        "Kurtosis": [mardia[1]],
-                        "p-value": [mardia[2]],
-                        "Normal": [mardia[3]]
-                    })
-                    results.append({
-                        "test": "Normalité multivariée (Pingouin Mardia)",
-                        "result_df": mvn_df,
-                        "fig": None
-                    })
-            except Exception as e_m:
-                results.append({"test": "Normalité multivariée", "error": f"pingouin présent mais erreur: {e_m}"})
-        except Exception:
-            # pingouin absent -> skip quietly but add note
-            results.append({"test": "Normalité multivariée", "info": "pingouin non installé — test multivarié non réalisé"})
+                    hz_stat, hz_p, hz_norm = pg.multivariate_normality(numeric_for_mvn, alpha=0.05)
+                    entry["result_df"] = pd.DataFrame({"HZ_stat": [hz_stat], "p-value": [hz_p], "normal": [hz_norm]})
+                    entry["additional_info"] = {"conclusion": "multinormalité" if hz_norm else "non multinormale"}
+                else:
+                    entry["additional_info"] = {"note": "Données insuffisantes pour normalité multivariée (min 10 obs)."}
+            except Exception:
+                # fallback: try to compute Mardia via pingouin or skip
+                try:
+                    import pingouin as pg2
+                    numeric_for_mvn = numeric_subset.dropna()
+                    if numeric_for_mvn.shape[0] >= 10 and numeric_for_mvn.shape[1] >= 2:
+                        mardia = pg2.multivariate_normality(numeric_for_mvn, alpha=0.05)
+                        entry["result_df"] = pd.DataFrame({"Mardia_skew": [mardia[0]], "Mardia_kurt": [mardia[1]], "p-value": [mardia[2]]})
+                        entry["additional_info"] = {"conclusion": mardia[3]}
+                    else:
+                        entry["additional_info"] = {"note": "Données insuffisantes pour normalité multivariée."}
+                except Exception:
+                    entry["additional_info"] = {"note": "pingouin non installé — normalité multivariée non réalisée"}
+        except Exception as e:
+            entry["error"] = str(e)
+        results.append(entry)
 
-        # Box's M (homogénéité des matrices covariance) - optional: try to compute via external lib or skip
+        # ----------------
+        # 8) Box's M (homogénéité matrices covariance) - requires categorical grouping variable
+        # ----------------
+        entry = {"test": "Box's M", "result_df": None, "fig": None, "additional_info": None, "error": None}
         try:
-            # Attempt to use bioinfokit if available
-            from bioinfokit.analys import stat
-            try:
-                # requires categorical grouping, here we don't have multiple groups for MANOVA directly
-                # we skip unless user provided grouping variable (not always the case)
-                results.append({"test": "Box's M", "info": "Box's M not computed by default (requires grouping variable)."})
-            except Exception as e_box:
-                results.append({"test": "Box's M", "error": str(e_box)})
-        except Exception:
-            results.append({"test": "Box's M", "info": "bioinfokit non installé — test Box's M non réalisé"})
+            # Box's M is meaningful if target_var is categorical (groups) and explicatives numeric
+            if not pd.api.types.is_numeric_dtype(subset[target_var]) and not numeric_subset.empty:
+                M_corr, df_box, pval_box, box_err = _box_m_test(numeric_subset, subset[target_var])
+                if box_err:
+                    entry["error"] = box_err
+                else:
+                    entry["result_df"] = pd.DataFrame({"BoxM": [M_corr], "df": [df_box], "p-value": [pval_box]})
+                    entry["additional_info"] = {"conclusion": "homogène" if pval_box > 0.05 else "hétérogénéité détectée"}
+            else:
+                entry["additional_info"] = {"note": "Box's M non applicable (target numérique ou pas de variables numériques explicatives)."}
+        except Exception as e:
+            entry["error"] = str(e)
+        results.append(entry)
 
     except Exception as e:
-        results.append({"test": "Global", "error": str(e)})
+        results.append({"test": "Global", "result_df": None, "fig": None, "additional_info": None, "error": str(e)})
 
     return results
