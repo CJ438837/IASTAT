@@ -127,7 +127,7 @@ def propose_tests_multivariés(df, types_df, target_var, explicatives):
                 fig = None
                 try:
                     if n_comp >= 2:
-                        fig, ax = plt.subplots(figsize=(6, 6))
+                        fig, ax = plt.subplots(figsize=(4, 3))
                         circle = plt.Circle((0, 0), 1, color="black", fill=False)
                         ax.add_patch(circle)
                         load = np.array(loadings)
@@ -192,7 +192,7 @@ def propose_tests_multivariés(df, types_df, target_var, explicatives):
                 coords = famd.fit_transform(subset)
                 fig = None
                 try:
-                    fig, ax = plt.subplots(figsize=(6, 5))
+                    fig, ax = plt.subplots(figsize=(4, 3))
                     ax.scatter(coords.iloc[:, 0], coords.iloc[:, 1], alpha=0.7)
                     ax.set_title("FAMD - individus")
                 except Exception:
@@ -250,7 +250,7 @@ def propose_tests_multivariés(df, types_df, target_var, explicatives):
                     try:
                         resid = model.resid
                         fitted = model.fittedvalues
-                        fig_res, ax = plt.subplots(figsize=(6, 4))
+                        fig_res, ax = plt.subplots(figsize=(4, 3))
                         ax.scatter(fitted, resid, alpha=0.7)
                         ax.axhline(0, color="red", linestyle="--")
                         ax.set_xlabel("Fitted")
@@ -285,7 +285,7 @@ def propose_tests_multivariés(df, types_df, target_var, explicatives):
             corr_df = numeric_subset.corr()
             fig_corr = None
             try:
-                fig_corr, ax = plt.subplots(figsize=(6, 5))
+                fig_corr, ax = plt.subplots(figsize=(4, 3))
                 cax = ax.matshow(corr_df, cmap="coolwarm")
                 fig_corr.colorbar(cax)
                 ax.set_title("Matrice de corrélation")
