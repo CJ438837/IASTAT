@@ -111,7 +111,7 @@ def app():
         st.button("Suivant ➡️", on_click=next_plot, key="next_dist_plot")
 
     plot_path = os.path.join(output_folder, plot_files[st.session_state.dist_plot_index])
-    st.image(plot_path, use_column_width=True)
+    st.image(plot_path, use_container_width=True)
     st.caption(
         f"Graphique {st.session_state.dist_plot_index + 1} / {len(plot_files)} : "
         f"{plot_files[st.session_state.dist_plot_index]}"
@@ -131,6 +131,7 @@ def app():
         if st.button("➡️ Besoin d'une aide théorique ?", use_container_width=True):
             st.session_state.main_page = "Théorie"
             st.session_state.theorie_subpage = "Distribution"
+
 
 
 
